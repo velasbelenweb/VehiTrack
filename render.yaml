@@ -1,0 +1,19 @@
+# ================================================================
+#  Render Blueprint — VEHITRACK (frontend estático)
+#  Sube este archivo a la raíz del repo y en Render usa
+#  "New +" → "Blueprint" para desplegarlo automáticamente.
+#
+#  Nota: esto SOLO despliega el frontend HTML. El backend
+#  (Edge Functions + base de datos) vive en Supabase, no aquí.
+# ================================================================
+services:
+  - type: web
+    name: vehitrack
+    runtime: static
+    buildCommand: ""            # no hay build, es HTML plano
+    staticPublishPath: .        # sirve index.html y los demás archivos desde la raíz
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
