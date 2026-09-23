@@ -18,8 +18,13 @@
 // ================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 const json = (o: unknown, s = 200) =>
-  new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
+  new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
 
 // Créditos que otorga cada monto de recarga (debe reflejar lo que
 // muestra el frontend en el modal de recarga).
@@ -35,6 +40,7 @@ async function sha256hex(str: string) {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
