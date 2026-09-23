@@ -328,15 +328,20 @@ a{ color:inherit; text-decoration:none; }
 <!-- ============ MODAL LOGIN ============ -->
 <div class="overlay hidden" id="loginOv">
   <div class="sheet">
-    <h3>Ingresar</h3>
-    <p>Accede a tu cuenta para consultar y ver tu saldo.</p>
+    <h3 id="lgTitulo">Ingresar</h3>
+    <p id="lgSub">Accede a tu cuenta para consultar y ver tu saldo.</p>
     <div style="text-align:left; margin-bottom:12px">
       <input id="lgEmail" type="email" placeholder="tu@correo.com" autocomplete="username" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px;margin-bottom:10px" />
       <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
     </div>
     <div class="form-err hidden" id="lgErr" style="text-align:left;margin-bottom:12px"></div>
-    <button class="btn-go" style="width:100%;justify-content:center" onclick="login()">Ingresar</button>
-    <button class="sheet-close" style="margin-top:14px" onclick="cerrarLogin()">Ahora no</button>
+    <div class="form-err hidden" id="lgOk" style="text-align:left;margin-bottom:12px;color:var(--brand)"></div>
+    <button class="btn-go" id="lgBtn" style="width:100%;justify-content:center" onclick="login()">Ingresar</button>
+    <p style="margin-top:14px;font-size:13.5px;color:var(--muted)">
+      <span id="lgTogglePre">¿No tienes cuenta?</span>
+      <a href="#" onclick="toggleLoginMode();return false;" style="color:var(--brand);font-weight:600;text-decoration:none" id="lgToggleLink">Crear cuenta</a>
+    </p>
+    <button class="sheet-close" style="margin-top:6px" onclick="cerrarLogin()">Ahora no</button>
   </div>
 </div>
 
@@ -454,15 +459,54 @@ async function cargarSaldo(){
 }
 
 /* --- Login / logout --- */
-function abrirLogin(){ $('#loginOv').classList.remove('hidden'); }
+let lgModo = 'signin'; // 'signin' | 'signup'
+function abrirLogin(){ lgModo='signin'; pintarModoLogin(); $('#loginOv').classList.remove('hidden'); }
 function cerrarLogin(){ $('#loginOv').classList.add('hidden'); }
+function toggleLoginMode(){
+  lgModo = (lgModo==='signin') ? 'signup' : 'signin';
+  pintarModoLogin();
+}
+function pintarModoLogin(){
+  $('#lgErr').classList.add('hidden'); $('#lgOk').classList.add('hidden');
+  if(lgModo==='signup'){
+    $('#lgTitulo').textContent = 'Crear cuenta';
+    $('#lgSub').textContent = 'Regístrate para empezar a consultar y llevar tu saldo.';
+    $('#lgBtn').textContent = 'Crear cuenta';
+    $('#lgBtn').setAttribute('onclick','registrar()');
+    $('#lgTogglePre').textContent = '¿Ya tienes cuenta?';
+    $('#lgToggleLink').textContent = 'Ingresar';
+  } else {
+    $('#lgTitulo').textContent = 'Ingresar';
+    $('#lgSub').textContent = 'Accede a tu cuenta para consultar y ver tu saldo.';
+    $('#lgBtn').textContent = 'Ingresar';
+    $('#lgBtn').setAttribute('onclick','login()');
+    $('#lgTogglePre').textContent = '¿No tienes cuenta?';
+    $('#lgToggleLink').textContent = 'Crear cuenta';
+  }
+}
 async function login(){
   const email=$('#lgEmail').value.trim(), password=$('#lgPass').value, err=$('#lgErr');
-  err.classList.add('hidden');
+  err.classList.add('hidden'); $('#lgOk').classList.add('hidden');
   if(!email||!password){ err.textContent='Escribe tu correo y contraseña.'; err.classList.remove('hidden'); return; }
   const { error } = await sb.auth.signInWithPassword({ email, password });
   if(error){ err.textContent = error.message.includes('Invalid')?'Correo o contraseña incorrectos.':error.message; err.classList.remove('hidden'); return; }
   cerrarLogin();
+}
+async function registrar(){
+  const email=$('#lgEmail').value.trim(), password=$('#lgPass').value, err=$('#lgErr'), ok=$('#lgOk');
+  err.classList.add('hidden'); ok.classList.add('hidden');
+  if(!email||!password){ err.textContent='Escribe tu correo y contraseña.'; err.classList.remove('hidden'); return; }
+  if(password.length<6){ err.textContent='La contraseña debe tener al menos 6 caracteres.'; err.classList.remove('hidden'); return; }
+  const btn=$('#lgBtn'); btn.textContent='Creando cuenta…'; btn.disabled=true;
+  const { data, error } = await sb.auth.signUp({ email, password });
+  btn.disabled=false; btn.textContent='Crear cuenta';
+  if(error){ err.textContent = error.message.includes('already registered')?'Ese correo ya tiene una cuenta. Inicia sesión.':error.message; err.classList.remove('hidden'); return; }
+  if(data?.session){ // confirmación de correo desactivada: ya quedó logueado
+    cerrarLogin();
+  } else { // confirmación de correo activada: falta que confirme el enlace
+    ok.textContent = 'Cuenta creada. Revisa tu correo y confirma el enlace para poder ingresar.';
+    ok.classList.remove('hidden');
+  }
 }
 async function logout(){ await sb.auth.signOut(); }
 
