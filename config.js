@@ -14,14 +14,14 @@
    ================================================================ */
 window.VEHITRACK_CONFIG = {
   // Panel de Supabase → Project Settings → API → Project URL
-  SUPABASE_URL: "https://TU-PROYECTO.supabase.co",
+  SUPABASE_URL: "https://xxkcxktvzpyrrgsrubjq.supabase.co",
 
   // Panel de Supabase → Project Settings → API → anon public key
-  SUPABASE_ANON_KEY: "TU-LLAVE-ANON-PUBLICA",
+  SUPABASE_ANON_KEY: "sb_publishable_Vet3d8U4YcToSHhXeEuRjA_LQYxU5_3",
 
   // Panel de Wompi → Configuración → Llaves → Llave pública
   // Usa pub_test_... en sandbox y pub_prod_... en producción.
-  WOMPI_PUBLIC_KEY: "pub_test_TU-LLAVE-PUBLICA",
+  WOMPI_PUBLIC_KEY: "pub_prod_PTEmMk27pwBZLnlKJveokxlc67CUVoKY",
 
   // Sandbox: https://sandbox.wompi.co/v1  |  Producción: https://production.wompi.co/v1
   WOMPI_API_URL: "https://sandbox.wompi.co/v1"
