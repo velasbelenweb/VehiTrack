@@ -90,5 +90,5 @@ create trigger on_auth_user_created
 --    update public.wallets set creditos = creditos + 1000, plan = 'Suscripción 1000'
 --    where user_id = (select id from auth.users where email = 'cliente@correo.com');
 --
---  (Más adelante esto lo hará automáticamente el webhook de Bold.)
+--  (Más adelante esto lo hará automáticamente el webhook de Wompi.)
 -- ================================================================

@@ -1,11 +1,11 @@
 -- ================================================================
---  VEHITRACK · SUSCRIPCIONES (débito automático con Bold)
+--  VEHITRACK · SUSCRIPCIONES (débito automático con Wompi)
 --  Ejecutar después de verifica-backend.sql y verifica-pagos.sql
 --
 --  CORRECCIONES sobre el archivo original:
 --   1) suscripciones.estado ahora nace en 'pendiente' (no 'activa').
 --      Antes, una suscripción recién creada ya se veía como activa
---      ANTES de que Bold confirmara el primer cobro. Ahora solo el
+--      ANTES de que Wompi confirmara el primer cobro. Ahora solo el
 --      webhook la pasa a 'activa' cuando el pago se aprueba.
 --   2) cobros.user_id ahora es NOT NULL y referencia auth.users,
 --      porque la política de seguridad (RLS) depende de esa columna
@@ -23,7 +23,7 @@ create table if not exists public.suscripciones (
                     check (plan in ('Basic','Standard','Advanced')),
   amount_cents    bigint not null,
   creditos_ciclo  integer not null,              -- créditos que otorga cada mes
-  payment_source_id text,                        -- fuente de pago (tarjeta) de Bold
+  payment_source_id text,                        -- fuente de pago (tarjeta) de Wompi
   customer_email  text,
   estado          text not null default 'pendiente' -- CORREGIDO (antes: 'activa')
                     check (estado in ('pendiente','activa','morosa','cancelada')),
@@ -44,7 +44,7 @@ create table if not exists public.cobros (
   creditos       integer not null,
   estado         text not null default 'pendiente' -- pendiente | aprobado | rechazado
                     check (estado in ('pendiente','aprobado','rechazado')),
-  bold_txn_id   text,
+  wompi_txn_id   text,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );

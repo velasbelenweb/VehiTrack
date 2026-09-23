@@ -1,22 +1,18 @@
 // ================================================================
 //  VEHITRACK · Edge Function "recarga-firma"
 //  ----------------------------------------------------------------
-//  El frontend llama a esta función antes de mostrar el botón de
-//  pagos de Bold. Aquí (y solo aquí) vive la llave SECRETA de Bold,
-//  usada para calcular la "firma de integridad" que exige su botón.
+//  Genera la referencia y la "firma de integridad" que exige el
+//  checkout hospedado de Wompi (checkout.wompi.co/p/) antes de
+//  redirigir al usuario a pagar. La llave SECRETA de integridad de
+//  Wompi vive solo aquí, nunca en el frontend.
 //
-//  Fórmula de la firma (documentada por Bold para el botón de pagos):
-//    sha256hex( `${orderId}${amountInCents... o amount}${currency}${secretKey}` )
-//  ⚠️ No verificado con documentación oficial actualizada de Bold —
-//  confirma en tu panel de Bold (Integraciones → Botón de pagos) el
-//  orden exacto de los campos y si el monto va en pesos o en
-//  centavos antes de pasar a producción. Ajusta `armarFirma` si es
-//  distinto.
+//  Fórmula oficial de Wompi para la firma de integridad del widget:
+//    sha256hex( `${reference}${amountInCents}${currency}${integritySecret}` )
 //
 //  Variables de entorno requeridas (Supabase → Edge Functions → Secrets):
 //    SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (las inyecta Supabase)
-//    BOLD_API_KEY      llave de IDENTIDAD (pública) de Bold
-//    BOLD_SECRET_KEY   llave SECRETA de Bold — nunca sale de esta función
+//    WOMPI_PUBLIC_KEY        llave pública de Wompi (pub_test_... / pub_prod_...)
+//    WOMPI_INTEGRITY_SECRET  llave secreta de integridad (Configuración → Llaves)
 //
 //  Desplegar:  supabase functions deploy recarga-firma
 // ================================================================
@@ -38,12 +34,6 @@ async function sha256hex(str: string) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function armarFirma(orderId: string, amount: number, currency: string) {
-  const secret = Deno.env.get("BOLD_SECRET_KEY");
-  if (!secret) throw new Error("BOLD_SECRET_KEY no configurada");
-  return sha256hex(`${orderId}${amount}${currency}${secret}`);
-}
-
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
   try {
@@ -62,20 +52,21 @@ Deno.serve(async (req) => {
     const creditos = TABLA_RECARGAS[monto];
     if (!monto || !creditos) return json({ error: "monto_invalido" }, 400);
 
-    const apiKey = Deno.env.get("BOLD_API_KEY");
-    if (!apiKey) return json({ error: "bold_no_configurado" }, 500);
+    const publicKey = Deno.env.get("WOMPI_PUBLIC_KEY");
+    const secret = Deno.env.get("WOMPI_INTEGRITY_SECRET");
+    if (!publicKey || !secret) return json({ error: "wompi_no_configurado" }, 500);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const orderId = `AFV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-    const currency = "COP";
+    const reference = `AFV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    const amountInCents = monto * 100;
 
     const { error: insErr } = await admin.from("recargas").insert({
-      user_id: userId, reference: orderId, monto_cents: monto * 100, creditos, estado: "pendiente",
+      user_id: userId, reference, monto_cents: amountInCents, creditos, estado: "pendiente",
     });
     if (insErr) return json({ error: "error_interno", detalle: insErr.message }, 500);
 
-    const signature = await armarFirma(orderId, monto, currency);
-    return json({ orderId, amount: monto, currency, apiKey, signature });
+    const signature = await sha256hex(`${reference}${amountInCents}COP${secret}`);
+    return json({ reference, amountInCents, publicKey, signature });
   } catch (e) {
     return json({ error: "error_interno", detalle: String(e) }, 500);
   }

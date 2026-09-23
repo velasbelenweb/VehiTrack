@@ -23,8 +23,8 @@
   --radius:15px; --shadow:0 6px 20px rgba(22,34,47,.09), 0 1px 3px rgba(22,34,47,.06);
 }
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
-html{ scroll-behavior:smooth; }
-body{ font-family:'Inter',system-ui,sans-serif; background:var(--paper); color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased; }
+html{ scroll-behavior:smooth; overflow-x:hidden; }
+body{ font-family:'Inter',system-ui,sans-serif; background:var(--paper); color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; overflow-wrap:anywhere; }
 button{ font:inherit; cursor:pointer; border:none; background:none; color:inherit; }
 input,select{ font:inherit; color:inherit; width:100%; }
 a{ color:inherit; text-decoration:none; }
@@ -34,18 +34,17 @@ a{ color:inherit; text-decoration:none; }
 .hidden{ display:none !important; }
 
 /* ---------- Header ---------- */
-.hd{ position:sticky; top:0; z-index:20; background:rgba(16,21,31,.94); backdrop-filter:blur(10px); border-bottom:1px solid var(--line-dk); color:#fff; }
-.hd-in{ display:flex; align-items:center; gap:16px; height:64px; }
+.hd{ position:sticky; top:0; z-index:20; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); color:var(--text); box-shadow:0 1px 0 rgba(22,34,47,.04); }
+.hd-in{ display:flex; align-items:center; gap:16px; height:84px; }
 .logo{ display:flex; align-items:center; gap:9px; }
-.logo b{ font-family:'Poppins',sans-serif; font-weight:800; font-size:21px; letter-spacing:-.01em; color:#fff; }
-.logo b i{ color:var(--brand); font-style:normal; }
+.logo img{ height:56px; display:block; }
 .hd .sp{ margin-left:auto; }
-.hd .lnk{ font-size:13.5px; font-weight:600; color:rgba(255,255,255,.66); }
-.hd .lnk:hover{ color:#fff; }
-.wallet{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.06); border:1px solid var(--line-dk); border-radius:10px; padding:7px 12px; font-size:13px; }
+.hd .lnk{ font-size:13.5px; font-weight:600; color:var(--muted); }
+.hd .lnk:hover{ color:var(--text); }
+.wallet{ display:inline-flex; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:7px 12px; font-size:13px; }
 .wallet .cr{ font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--brand); }
-.wallet .rc{ color:rgba(255,255,255,.6); border-left:1px solid var(--line-dk); padding-left:8px; }
-.wallet .rc:hover{ color:#fff; }
+.wallet .rc{ color:var(--muted); border-left:1px solid var(--line); padding-left:8px; }
+.wallet .rc:hover{ color:var(--text); }
 
 /* ---------- Consulta ---------- */
 .consulta{ background:var(--ink); color:#fff; position:relative; overflow:hidden; }
@@ -195,6 +194,9 @@ a{ color:inherit; text-decoration:none; }
 @media (max-width:520px){
   .form-row{ grid-template-columns:1fr; }
   .hd .lnk{ display:none; }
+  .wrap{ padding-inline:22px; }
+  .consulta-in{ padding-block:48px 56px; }
+  .sheet{ padding:22px; }
 }
 @media (prefers-reduced-motion:reduce){ *{ animation:none!important; transition:none!important; } }
 @media print{
@@ -210,14 +212,7 @@ a{ color:inherit; text-decoration:none; }
 <header class="hd">
   <div class="wrap hd-in">
     <a href="#" class="logo" onclick="irConsulta();return false;" aria-label="VehiTrack">
-      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M2 3 L10 3 L13 12 L16 3 L24 3 L16.5 23 L9.5 23 Z" fill="url(#vtGrad)"/>
-        <path d="M13 8 L13 18" stroke="#fff" stroke-width="1.6" stroke-dasharray="3 3" stroke-linecap="round"/>
-        <defs><linearGradient id="vtGrad" x1="2" y1="3" x2="24" y2="23" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#1C2C3E"/><stop offset=".55" stop-color="#0A9D7B"/><stop offset="1" stop-color="#12B886"/>
-        </linearGradient></defs>
-      </svg>
-      <b>Vehi<i>Track</i></b>
+      <img src="logo.png" alt="VehiTrack" />
     </a>
     <div class="sp"></div>
     <a class="lnk" href="#planes">Planes</a>
@@ -228,7 +223,7 @@ a{ color:inherit; text-decoration:none; }
     </div>
     <span class="wallet" id="acctChip" hidden style="gap:10px">
       <span class="cr" id="planChip" hidden style="color:var(--brand)"></span>
-      <span class="who" id="acctEmail" style="font-size:12.5px;color:rgba(255,255,255,.7)"></span>
+      <span class="who" id="acctEmail" style="font-size:12.5px;color:var(--muted)"></span>
       <button class="rc" onclick="logout()">Salir</button>
     </span>
   </div>
@@ -353,13 +348,18 @@ a{ color:inherit; text-decoration:none; }
     <h3 id="suscTitulo">Suscribirte</h3>
     <p id="suscDetalle">—</p>
     <div style="text-align:left; display:flex; flex-direction:column; gap:10px">
+      <input id="cardNum" inputmode="numeric" placeholder="Número de tarjeta" autocomplete="cc-number" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <input id="cardExp" placeholder="MM/AA" autocomplete="cc-exp" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
+        <input id="cardCvc" inputmode="numeric" placeholder="CVC" autocomplete="cc-csc" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
+      </div>
+      <input id="cardName" placeholder="Nombre en la tarjeta" autocomplete="cc-name" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
       <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);text-align:left"><input type="checkbox" id="acc1" style="width:16px;height:16px;margin-top:2px;flex-shrink:0" /> Acepto el reglamento y los términos y condiciones del servicio.</label>
-      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);text-align:left"><input type="checkbox" id="acc2" style="width:16px;height:16px;margin-top:2px;flex-shrink:0" /> Autorizo el tratamiento de mis datos personales y el cobro mensual de esta suscripción.</label>
+      <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);text-align:left"><input type="checkbox" id="acc2" style="width:16px;height:16px;margin-top:2px;flex-shrink:0" /> Autorizo el tratamiento de mis datos personales y el débito automático mensual.</label>
     </div>
     <div class="form-err hidden" id="suscErr" style="text-align:left;margin:12px 0 0"></div>
     <button class="btn-go" id="suscPagar" style="width:100%;justify-content:center;margin-top:16px" onclick="procesarSuscripcion()">Pagar y activar</button>
-    <div id="suscBoldBtn" style="margin-top:14px"></div>
-    <div class="pay-methods" style="margin-top:14px"><span class="pm">Tarjeta</span><span class="pm">PSE</span><span class="pm">Bold</span></div>
+    <div class="pay-methods" style="margin-top:14px"><span class="pm">Débito automático</span><span class="pm">Tarjeta</span><span class="pm">Wompi</span></div>
     <button class="sheet-close" onclick="cerrarSusc()">Ahora no</button>
   </div>
 </div>
@@ -374,9 +374,8 @@ a{ color:inherit; text-decoration:none; }
       <button class="rec" onclick="recargar(50000)"><div class="v">$50.000</div><div class="b">+2 bono</div></button>
       <button class="rec" onclick="recargar(100000)"><div class="v">$100.000</div><div class="b">+5 bono</div></button>
     </div>
-    <div id="recargaBoldBtn" style="margin-top:6px"></div>
     <div class="pay-methods">
-      <span class="pm">Tarjeta</span><span class="pm">PSE</span><span class="pm">Bold</span>
+      <span class="pm">Nequi</span><span class="pm">PSE</span><span class="pm">Tarjeta</span><span class="pm">Bancolombia</span>
     </div>
     <button class="sheet-close" onclick="cerrarRecarga()">Ahora no</button>
   </div>
@@ -467,91 +466,93 @@ async function login(){
 }
 async function logout(){ await sb.auth.signOut(); }
 
-/* ================================================================
-   Pagos con Bold (botón de pagos: tarjeta, PSE, Nequi, botón bancario)
-   ----------------------------------------------------------------
-   Bold NO recibe el número de tarjeta en nuestro frontend: el
-   usuario paga en el checkout hospedado de Bold. Nuestro backend
-   (Edge Function) solo genera la "firma de integridad" con la
-   llave secreta, y aquí montamos el botón oficial de Bold con esos
-   datos. El usuario hace clic y termina el pago en Bold.
-   ================================================================ */
-function montarBotonBold(cont, datos){
-  cont.innerHTML = '';
-  const s = document.createElement('script');
-  s.src = 'https://checkout.bold.co/library/boldPaymentButton.js';
-  s.setAttribute('data-bold-button', 'dark-L');
-  s.setAttribute('data-order-id', datos.orderId);
-  s.setAttribute('data-currency', datos.currency || 'COP');
-  s.setAttribute('data-amount', datos.amount);
-  s.setAttribute('data-api-key', datos.apiKey);
-  s.setAttribute('data-integrity-signature', datos.signature);
-  s.setAttribute('data-description', datos.description || 'VehiTrack');
-  s.setAttribute('data-redirection-url', datos.redirectUrl || (location.origin + location.pathname));
-  cont.appendChild(s);
-}
-
-/* --- Recarga de wallet --- */
+/* --- Recarga (Wompi: Nequi, PSE, tarjeta) --- */
 function abrirRecarga(){ if(sb && !sesion){ abrirLogin(); return; } $('#recargaOv').classList.remove('hidden'); }
-function cerrarRecarga(){ $('#recargaOv').classList.add('hidden'); $('#recargaBoldBtn').innerHTML=''; }
+function cerrarRecarga(){ $('#recargaOv').classList.add('hidden'); }
 async function recargar(monto){
-  if(!sb){ // vista previa: Supabase/Bold aún no están conectados
+  if(!sb){ // vista previa: Supabase/Wompi aún no están conectados
     creditos += Math.floor(monto/5000) + (monto>=100000?5:monto>=50000?2:0); pintarWallet(); cerrarRecarga();
-    toast('Vista previa: se simuló la recarga (Bold aún no está conectado).');
+    toast('Vista previa: se simuló la recarga (Wompi aún no está conectado).');
     return;
   }
+  cerrarRecarga();
   toast('Preparando el pago seguro…');
   const { data, error } = await sb.functions.invoke('recarga-firma', { body:{ monto } });
-  if(error || !data?.orderId){ toast('No pudimos iniciar la recarga. Intenta de nuevo.'); return; }
-  montarBotonBold($('#recargaBoldBtn'), {
-    orderId: data.orderId, amount: data.amount, currency: data.currency,
-    apiKey: data.apiKey, signature: data.signature,
-    description: `Recarga VehiTrack · ${money(monto)}`,
-  });
+  if(error || !data?.reference){ toast('No pudimos iniciar la recarga. Intenta de nuevo.'); return; }
+  // Redirección al checkout hospedado de Wompi (ofrece Nequi, PSE, tarjeta y Bancolombia)
+  const f = document.createElement('form');
+  f.method='GET'; f.action='https://checkout.wompi.co/p/';
+  const add=(k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=String(v); f.appendChild(i); };
+  add('public-key', data.publicKey);
+  add('currency', 'COP');
+  add('amount-in-cents', data.amountInCents);
+  add('reference', data.reference);
+  add('signature:integrity', data.signature);
+  add('redirect-url', location.origin + location.pathname);
+  document.body.appendChild(f); f.submit();
 }
 
 /* ================================================================
-   Suscripciones (cobro mensual con Bold)
-   ⚠️ Bold cobra este primer ciclo a través del botón de pagos, igual
-   que una recarga. Los cobros de los meses siguientes los agenda el
-   backend (ver DEPLOY.md): confirma con la documentación oficial de
-   Bold cuál es su mecanismo de cobro recurrente/"cliente guardado"
-   antes de dejar esto en producción — no está verificado aquí.
+   Suscripciones (débito automático con Wompi)
+   ----------------------------------------------------------------
+   Wompi sí soporta cobro recurrente real: tokenizamos la tarjeta en
+   el navegador (nunca toca nuestro backend), y el Edge Function usa
+   ese token + el token de aceptación para crear una "fuente de pago"
+   reutilizable. Con esa fuente, el backend puede cobrar el primer
+   mes y los siguientes sin que el usuario vuelva a ingresar la
+   tarjeta (ver `cobrar-suscripciones` para la renovación mensual).
    ================================================================ */
+const WOMPI_API = (CONFIG.WOMPI_API_URL || 'https://production.wompi.co/v1');
 const PLANES = { Basic:{amount:29900,cred:10}, Standard:{amount:69900,cred:30}, Advanced:{amount:149900,cred:100} };
 let planSel = null;
+
+async function tokenizarTarjeta(c){
+  const r = await fetch(`${WOMPI_API}/tokens/cards`, {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${CONFIG.WOMPI_PUBLIC_KEY}`, 'Content-Type':'application/json' },
+    body: JSON.stringify({ number:c.number, cvc:c.cvc, exp_month:c.exp_month, exp_year:c.exp_year, card_holder:c.card_holder })
+  });
+  const j = await r.json();
+  if(j.status !== 'CREATED' || !j?.data?.id) throw new Error(j?.error?.messages ? 'Datos de la tarjeta inválidos.' : (j?.error?.reason || 'No se pudo validar la tarjeta.'));
+  return j.data.id;
+}
+async function obtenerAcceptance(){
+  const r = await fetch(`${WOMPI_API}/merchants/${CONFIG.WOMPI_PUBLIC_KEY}`);
+  const j = await r.json();
+  return j?.data?.presigned_acceptance?.acceptance_token;
+}
 
 function suscribir(plan){
   if(sb && !sesion){ abrirLogin(); return; }
   planSel = plan; const p = PLANES[plan];
   $('#suscTitulo').textContent = `Suscripción ${plan}`;
-  $('#suscDetalle').textContent = `${money(p.amount)}/mes · ${p.cred} consultas mensuales`;
+  $('#suscDetalle').textContent = `${money(p.amount)}/mes · ${p.cred} consultas mensuales · se renueva solo`;
   $('#suscErr').classList.add('hidden');
-  $('#suscBoldBtn').innerHTML = '';
   $('#suscOv').classList.remove('hidden');
 }
-function cerrarSusc(){ $('#suscOv').classList.add('hidden'); $('#suscBoldBtn').innerHTML=''; }
+function cerrarSusc(){ $('#suscOv').classList.add('hidden'); }
 
 async function procesarSuscripcion(){
   const err=$('#suscErr'); err.classList.add('hidden');
+  const number=$('#cardNum').value.replace(/\s/g,'');
+  const [mm,aa]=($('#cardExp').value||'').split('/').map(x=>(x||'').trim());
+  const cvc=$('#cardCvc').value.trim(), holder=$('#cardName').value.trim();
+  if(!number||!mm||!aa||!cvc||!holder){ err.textContent='Completa los datos de la tarjeta.'; err.classList.remove('hidden'); return; }
   if(!$('#acc1').checked || !$('#acc2').checked){ err.textContent='Debes aceptar los términos y la autorización de datos.'; err.classList.remove('hidden'); return; }
-  const btn=$('#suscPagar'); btn.textContent='Preparando pago…'; btn.disabled=true;
-  if(!sb){ // vista previa: Supabase/Bold aún no están conectados
-    $('#suscBoldBtn').innerHTML = '<div style="padding:13px 16px;border:1px dashed var(--line);border-radius:11px;font-size:13px;color:var(--muted);text-align:center">Aquí aparecerá el botón de pago de Bold cuando conectes Supabase y Bold.</div>';
-    toast('Vista previa: Bold aún no está conectado.');
-    btn.textContent='Pagar y activar'; btn.disabled=false;
+  const btn=$('#suscPagar'); btn.textContent='Procesando…'; btn.disabled=true;
+  if(!sb){ // vista previa: Supabase/Wompi aún no están conectados
+    toast('Vista previa: se simuló la suscripción (Wompi aún no está conectado).');
+    cerrarSusc(); btn.textContent='Pagar y activar'; btn.disabled=false;
     return;
   }
   try{
-    const { data, error } = await sb.functions.invoke('suscribir', { body:{ plan:planSel } });
+    const token = await tokenizarTarjeta({ number, cvc, exp_month:mm, exp_year:aa, card_holder:holder });
+    const acceptanceToken = await obtenerAcceptance();
+    const { data, error } = await sb.functions.invoke('suscribir', { body:{ plan:planSel, token, acceptanceToken } });
     if(error){ let pl=null; try{ pl=await error.context.json(); }catch(_){}; throw new Error(pl?.detalle || pl?.error || error.message); }
-    montarBotonBold($('#suscBoldBtn'), {
-      orderId: data.orderId, amount: data.amount, currency: data.currency,
-      apiKey: data.apiKey, signature: data.signature,
-      description: `Suscripción ${planSel} · VehiTrack`,
-    });
-    toast('Completa el pago con Bold para activar tu plan.');
-  }catch(e){ err.textContent = e.message || 'No se pudo iniciar el pago.'; err.classList.remove('hidden'); }
+    cerrarSusc(); toast('Estamos activando tu suscripción…');
+    let tries=0; const iv=setInterval(async()=>{ await cargarSaldo(); await cargarSuscripcion(); if(++tries>=6){ clearInterval(iv); } }, 2500);
+  }catch(e){ err.textContent = e.message || 'No se pudo procesar el pago.'; err.classList.remove('hidden'); }
   finally{ btn.textContent='Pagar y activar'; btn.disabled=false; }
 }
 
@@ -828,12 +829,9 @@ async function init(){
     sesion = session; pintarSesion(); await cargarSaldo(); await cargarSuscripcion();
     sb.auth.onAuthStateChange(async (_e, s)=>{ sesion = s; pintarSesion(); if(s){ await cargarSaldo(); await cargarSuscripcion(); } });
 
-    // ¿Volvió del checkout de Bold? Confirmar y refrescar saldo.
-    // ⚠️ No verificado: confirma con la documentación de Bold qué parámetro
-    // exacto agrega a tu data-redirection-url al volver (aquí se acepta
-    // cualquiera de estos nombres comunes; ajusta si Bold usa otro).
+    // ¿Volvió del checkout de Wompi? Confirmar y refrescar saldo.
     const params = new URLSearchParams(location.search);
-    if(params.get('id') || params.get('bold-order-id') || params.get('bold-tx-status')){
+    if(params.get('id')){
       toast('Confirmando tu pago…');
       let tries=0; const iv=setInterval(async ()=>{ await cargarSaldo(); if(++tries>=5){ clearInterval(iv); toast('Saldo actualizado.'); } }, 2500);
       history.replaceState({}, '', location.pathname);

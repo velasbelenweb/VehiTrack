@@ -1,5 +1,5 @@
 -- ================================================================
---  VEHITRACK · PAGOS (recargas de wallet con Bold)
+--  VEHITRACK · PAGOS (recargas de wallet con Wompi)
 --  Ejecutar después de verifica-backend.sql
 -- ================================================================
 
@@ -7,11 +7,11 @@
 create table if not exists public.recargas (
   id          bigint generated always as identity primary key,
   user_id     uuid references auth.users(id) on delete set null,
-  reference   text unique not null,          -- referencia enviada a Bold
+  reference   text unique not null,          -- referencia enviada a Wompi
   monto_cents bigint not null,
   creditos    integer not null,              -- créditos a otorgar si se aprueba
   estado      text not null default 'pendiente', -- pendiente | aprobada | rechazada
-  bold_txn_id text,
+  wompi_txn_id text,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

@@ -1,28 +1,20 @@
 // ================================================================
 //  VEHITRACK · Edge Function "suscribir"
 //  ----------------------------------------------------------------
-//  Crea la suscripción (estado 'pendiente') y el primer registro en
-//  `cobros`, y devuelve los datos firmados para que el frontend
-//  muestre el botón de pagos de Bold y el usuario complete el pago.
-//  El webhook (`bold-webhook`) es quien marca el cobro como aprobado
-//  y activa la suscripción cuando Bold confirma el pago.
-//
-//  ⚠️ LIMITACIÓN IMPORTANTE — revisar antes de producción:
-//  Esta función solo resuelve el PRIMER cobro (vía botón de pagos,
-//  igual que una recarga). No implementa cobro recurrente automático
-//  ("cliente guardado"/autodebit) porque no tengo información
-//  verificada del mecanismo real de Bold para cobros recurrentes.
-//  Antes de lanzar suscripciones en producción:
-//   1) Confirma con la documentación oficial de Bold (o su soporte)
-//      cuál es su API de cobro recurrente / tokenización de cliente.
-//   2) Si Bold no ofrece eso, la alternativa simple es generar un
-//      nuevo enlace de pago cada mes (con un cron/Scheduled Function)
-//      y notificar al usuario para que lo pague, en vez de un
-//      débito silencioso.
+//  Recibe el token de tarjeta y el token de aceptación que el
+//  frontend obtuvo directamente de Wompi (nunca vemos el número de
+//  tarjeta). Con la llave PRIVADA de Wompi:
+//   1) Crea una "fuente de pago" (payment source) reutilizable a
+//      partir del token — esto es lo que permite cobrar los meses
+//      siguientes sin que el usuario vuelva a ingresar la tarjeta.
+//   2) Cobra el primer mes contra esa fuente de pago.
+//  El webhook (`wompi-webhook`) confirma cuando Wompi aprueba esa
+//  primera transacción y activa la suscripción.
 //
 //  Variables de entorno requeridas (Supabase → Edge Functions → Secrets):
 //    SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (las inyecta Supabase)
-//    BOLD_API_KEY, BOLD_SECRET_KEY
+//    WOMPI_PRIVATE_KEY   llave privada de Wompi (prv_test_... / prv_prod_...)
+//    WOMPI_API_URL       https://sandbox.wompi.co/v1 o https://production.wompi.co/v1
 //
 //  Desplegar:  supabase functions deploy suscribir
 // ================================================================
@@ -36,11 +28,6 @@ const PLANES: Record<string, { amount: number; creditos: number }> = {
   Standard: { amount: 69900, creditos: 30 },
   Advanced: { amount: 149900, creditos: 100 },
 };
-
-async function sha256hex(str: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
@@ -57,35 +44,62 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan: string = body?.plan;
+    const token: string = body?.token;
+    const acceptanceToken: string = body?.acceptanceToken;
     const p = PLANES[plan];
-    if (!p) return json({ error: "plan_invalido" }, 400);
+    if (!p || !token || !acceptanceToken) return json({ error: "datos_incompletos" }, 400);
 
-    const apiKey = Deno.env.get("BOLD_API_KEY");
-    const secret = Deno.env.get("BOLD_SECRET_KEY");
-    if (!apiKey || !secret) return json({ error: "bold_no_configurado" }, 500);
+    const privateKey = Deno.env.get("WOMPI_PRIVATE_KEY");
+    const wompiApi = Deno.env.get("WOMPI_API_URL") || "https://production.wompi.co/v1";
+    if (!privateKey) return json({ error: "wompi_no_configurado" }, 500);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // 1) Crear la fuente de pago reutilizable a partir del token de tarjeta.
+    const psRes = await fetch(`${wompiApi}/payment_sources`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${privateKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "CARD", token, customer_email: user.email, acceptance_token: acceptanceToken,
+      }),
+    });
+    const psData = await psRes.json();
+    const paymentSourceId = psData?.data?.id;
+    if (!psRes.ok || !paymentSourceId) {
+      return json({ error: "tarjeta_rechazada", detalle: psData?.error?.messages || psData?.error?.reason || "No se pudo guardar la tarjeta." }, 402);
+    }
+
     const { data: sub, error: subErr } = await admin.from("suscripciones").insert({
       user_id: user.id, plan, amount_cents: p.amount * 100, creditos_ciclo: p.creditos,
-      customer_email: user.email, estado: "pendiente",
+      customer_email: user.email, payment_source_id: paymentSourceId, estado: "pendiente",
     }).select("id").single();
     if (subErr) return json({ error: "error_interno", detalle: subErr.message }, 500);
 
     const yyyymm = new Date().toISOString().slice(0, 7).replace("-", "");
-    const orderId = `SUB-${sub.id}-${yyyymm}`;
-    const currency = "COP";
+    const reference = `SUB-${sub.id}-${yyyymm}`;
 
-    const { error: cobroErr } = await admin.from("cobros").insert({
-      suscripcion_id: sub.id, user_id: user.id, reference: orderId,
-      amount_cents: p.amount * 100, creditos: p.creditos, estado: "pendiente",
+    // 2) Cobrar el primer mes contra la fuente de pago recién creada.
+    const txRes = await fetch(`${wompiApi}/transactions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${privateKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount_in_cents: p.amount * 100, currency: "COP", customer_email: user.email,
+        payment_source_id: paymentSourceId, reference,
+      }),
     });
-    if (cobroErr) return json({ error: "error_interno", detalle: cobroErr.message }, 500);
+    const txData = await txRes.json();
+    if (!txRes.ok || !txData?.data?.id) {
+      await admin.from("suscripciones").update({ estado: "rechazada" }).eq("id", sub.id);
+      return json({ error: "pago_rechazado", detalle: txData?.error?.messages || "Wompi rechazó el cobro." }, 402);
+    }
 
-    // ⚠️ Misma fórmula que recarga-firma; confirma con Bold que aplica igual
-    // para este flujo antes de producción (ver aviso arriba del archivo).
-    const signature = await sha256hex(`${orderId}${p.amount}${currency}${secret}`);
-    return json({ orderId, amount: p.amount, currency, apiKey, signature, subscriptionId: sub.id });
+    await admin.from("cobros").insert({
+      suscripcion_id: sub.id, user_id: user.id, reference,
+      amount_cents: p.amount * 100, creditos: p.creditos, estado: "pendiente",
+      wompi_txn_id: txData.data.id,
+    });
+
+    return json({ ok: true, subscriptionId: sub.id, transactionStatus: txData.data.status });
   } catch (e) {
     return json({ error: "error_interno", detalle: String(e) }, 500);
   }
