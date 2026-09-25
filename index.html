@@ -661,7 +661,8 @@ function icoBox(path){ return `<span class="ic"><svg viewBox="0 0 24 24" fill="n
 function badge(estado){ const map={ok:'Al día',warn:'Atención',bad:'Vencido',info:'Informativo'}; return `<span class="badge ${estado}">${map[estado]||estado}</span>`; }
 
 function renderInforme(r){
-  const v=r.vehicle.data, a=r.antecedentes.data, s=r.simit?.data, imp=r.impuestos?.data, soat=r.soat.data, rtm=r.rtm.data, fc=r.fasecolda?.data, lic=r.licencia?.data;
+  const v=r.vehicle.data, a=r.antecedentes.data, s=r.simit?.data, soat=r.soat.data, rtm=r.rtm.data, fc=r.fasecolda?.data, lic=r.licencia?.data;
+  const impSec = r.impuestos || {}, imp = impSec.data;
   const riesgo = calcularRiesgo(r);
   const deudaTotal = (imp?.totalPendiente||0) + (s?.totalDeuda||0);
   const folio = 'AFV-' + (v.placa||'') + '-' + Date.now().toString(36).toUpperCase().slice(-6);
@@ -739,7 +740,7 @@ function renderInforme(r){
         ${row('Comparendos', s.totalMultas)}
         ${row('Acuerdos de pago', s.acuerdosPago)}
         ${row('Estado', s.pazSalvo? '<span class="tag ok">Paz y salvo</span>' : '<span class="tag bad">Con deuda</span>')}
-      ` : `<div class="empty-sec">Módulo de multas SIMIT no incluido en esta consulta.<br>Disponible desde el plan Standard.</div>`}
+      ` : `<div class="empty-sec">Multas SIMIT no disponibles para esta consulta.</div>`}
     </div>
 
     <!-- SOAT -->
@@ -767,13 +768,13 @@ function renderInforme(r){
         ${impRows}
         ${row('Total pendiente', `<b>${money(imp.totalPendiente)}</b>`)}
         <div class="note">${imp.departamento}</div>
-      ` : `<div class="empty-sec">Módulo de impuestos no incluido en esta consulta.<br>Disponible desde el plan Standard.</div>`}
+      ` : `<div class="empty-sec">${impSec.error||'No pudimos traer el detalle de impuestos para este departamento.'}</div>`}
     </div>
 
     <!-- Siniestros -->
     <div class="rcard">
       <div class="rc-head">${icoBox('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<h3>Siniestros (Fasecolda)</h3>${badge(sinArr?(sinArr.length?'warn':'ok'):'info')}</div>
-      ${sinArr ? (sinArr.length? sinArr.map(x=>row(fmtDate(x.accidentDate), x.protection)).join('') : `<div class="empty-sec">Sin siniestros con reclamación registrados</div>`) : `<div class="empty-sec">Módulo de siniestros no incluido en esta consulta.<br>Disponible desde el plan Standard.</div>`}
+      ${sinArr ? (sinArr.length? sinArr.map(x=>row(fmtDate(x.accidentDate), x.protection)).join('') : `<div class="empty-sec">Sin siniestros con reclamación registrados</div>`) : `<div class="empty-sec">Siniestros no disponibles para esta consulta.</div>`}
     </div>
 
     <!-- Ficha técnica -->
@@ -787,7 +788,7 @@ function renderInforme(r){
         </div>
         ${equip.length? `<div class="equip">${equip.map(e=>`<span class="eq">${check}${e}</span>`).join('')}</div>`:''}
         <div class="note">${fc.importado?'Vehículo importado':''} ${fc.nacionalidad?('· Origen '+fc.nacionalidad):''}</div>
-      ` : `<div class="empty-sec">Módulo de avalúo Fasecolda no incluido en esta consulta.<br>Disponible desde el plan Standard.</div>`}
+      ` : `<div class="empty-sec">Avalúo Fasecolda no disponible para esta consulta.</div>`}
     </div>
 
     <!-- Pico y placa -->
