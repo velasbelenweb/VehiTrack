@@ -208,7 +208,10 @@ a{ color:inherit; text-decoration:none; }
   .hd, .consulta, .planes, .footer, .report-foot, .sources{ display:none !important; }
   body{ background:#fff; }
   .rcard, .report-head{ box-shadow:none; break-inside:avoid; }
+  .report-logo-print{ display:block !important; margin-bottom:16px; }
 }
+.report-logo-print{ display:none; }
+.report-logo-print img{ height:40px; }
 </style>
 </head>
 <body>
@@ -691,6 +694,7 @@ function renderInforme(r){
   const sinArr = r.siniestros;
 
   $('#informeBody').innerHTML = `
+  <div class="report-logo-print"><img src="logo.png" alt="VehiTrack" /></div>
   <div class="report-head">
     <div class="rh-left">
       <span class="plate">${(v.placa||'').replace(/(.{3})(.*)/,'$1·$2')}</span>
@@ -768,7 +772,7 @@ function renderInforme(r){
         ${impRows}
         ${row('Total pendiente', `<b>${money(imp.totalPendiente)}</b>`)}
         <div class="note">${imp.departamento}</div>
-      ` : `<div class="empty-sec">${impSec.error||'No pudimos traer el detalle de impuestos para este departamento.'}</div>`}
+      ` : `<div class="empty-sec">${impSec.error||'No pudimos traer el detalle de impuestos para este departamento.'}${impSec.portalUrl? `<br><a href="${impSec.portalUrl}" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">${impSec.portalUrl}</a>`:''}</div>`}
     </div>
 
     <!-- Siniestros -->
