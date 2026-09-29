@@ -61,6 +61,15 @@ a{ color:inherit; text-decoration:none; }
 .fg input#placa{ text-transform:uppercase; letter-spacing:.12em; font-family:'JetBrains Mono',monospace; }
 .fg input:focus, .fg select:focus{ outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(10,157,123,.14); }
 .form-cta{ display:flex; align-items:center; gap:14px; margin-top:14px; flex-wrap:wrap; }
+.report-tipo-sel{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+.rt-opt{ cursor:pointer; display:block; }
+.rt-opt input{ position:absolute; opacity:0; width:0; height:0; }
+.rt-card{ border:2px solid var(--line); border-radius:13px; padding:14px 16px; background:#fafbfc; transition:border-color .15s, background .15s; height:100%; }
+.rt-opt input:checked + .rt-card{ border-color:var(--brand); background:var(--brand-soft); }
+.rt-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
+.rt-name{ font-weight:700; font-size:14.5px; }
+.rt-price{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--brand); font-weight:700; white-space:nowrap; }
+.rt-desc{ font-size:12.5px; color:var(--muted); line-height:1.5; margin:0; }
 .btn-go{ display:inline-flex; align-items:center; justify-content:center; gap:9px; background:var(--brand); color:#fff; font-weight:700; font-size:15.5px; padding:14px 22px; border-radius:12px; transition:background .16s, transform .16s; }
 .btn-go:hover{ background:#E8382E; transform:translateY(-1px); }
 .btn-go svg{ width:18px; height:18px; }
@@ -190,6 +199,7 @@ a{ color:inherit; text-decoration:none; }
   .planes-grid{ grid-template-columns:1fr; }
   .form-row{ grid-template-columns:1fr 1fr; }
   .fg.doc{ grid-column:1 / -1; }
+  .report-tipo-sel{ grid-template-columns:1fr; }
 }
 @media (max-width:520px){
   .form-row{ grid-template-columns:1fr; }
@@ -208,10 +218,10 @@ a{ color:inherit; text-decoration:none; }
   .hd, .consulta, .planes, .footer, .report-foot, .sources{ display:none !important; }
   body{ background:#fff; }
   .rcard, .report-head{ box-shadow:none; break-inside:avoid; }
-  .report-logo-print{ display:block !important; margin-bottom:16px; }
+  .report-logo-print{ display:block !important; text-align:center; margin:0 0 22px; }
 }
 .report-logo-print{ display:none; }
-.report-logo-print img{ height:40px; }
+.report-logo-print img{ height:110px; width:auto; display:inline-block; }
 </style>
 </head>
 <body>
@@ -254,12 +264,28 @@ a{ color:inherit; text-decoration:none; }
         <div class="fg"><label for="primerApellido">Primer apellido del propietario</label><input id="primerApellido" placeholder="PÉREZ" autocomplete="off" /></div>
         <div class="fg"><label for="ciudad">Ciudad <span style="text-transform:none;letter-spacing:0">(para impuestos y pico y placa)</span></label><input id="ciudad" placeholder="Bogotá" autocomplete="off" /></div>
       </div>
+      <div class="report-tipo-sel">
+        <label class="rt-opt" id="rtBasicoLbl">
+          <input type="radio" name="tipoInforme" value="basico" checked onchange="cambiarTipoInforme()" />
+          <div class="rt-card">
+            <div class="rt-head"><span class="rt-name">Informe Básico</span><span class="rt-price">$5.000 · 3 créditos</span></div>
+            <p class="rt-desc">RUNT, SOAT, tecnomecánica, multas SIMIT, impuestos, avalúo Fasecolda y antecedentes (prendas/embargos), con semáforo de riesgo.</p>
+          </div>
+        </label>
+        <label class="rt-opt" id="rtAvanzadoLbl">
+          <input type="radio" name="tipoInforme" value="avanzado" onchange="cambiarTipoInforme()" />
+          <div class="rt-card">
+            <div class="rt-head"><span class="rt-name">Informe Avanzado</span><span class="rt-price">$10.000 · 5 créditos</span></div>
+            <p class="rt-desc">Todo lo del Básico, más el <b>historial de siniestros y pérdida total</b> del vehículo (desde 2008, solo autos que estuvieron asegurados).</p>
+          </div>
+        </label>
+      </div>
       <div class="form-cta">
         <button class="btn-go" onclick="consultar()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
           Consultar historial
         </button>
-        <span class="cost-note">Costo: <b>$5.000</b> por consulta · 1 crédito</span>
+        <span class="cost-note" id="costNote">Costo: <b>$5.000</b> por consulta · 3 créditos</span>
       </div>
       <div class="form-err hidden" id="formErr"></div>
     </div>
@@ -408,7 +434,7 @@ const sb = SB_OK ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPA
 /* ================================================================
    DATOS DE MUESTRA — solo para vista previa sin backend.
    ================================================================ */
-const SAMPLE = {"sandbox":true,"input":{"placa":"ABC123","docType":"CC","docNumber":"1020304050"},"mode":"live","generatedAt":"2026-07-24T15:04:05.000Z","vehicle":{"source":"vehiculo","status":"ok","data":{"placa":"ABC123","marca":"MAZDA","linea":"CX-30","modelo":2023,"cilindraje":2000,"combustible":"GASOLINA","servicio":"Particular","carroceria":"CAMIONETA","color":"ROJO","motor":"MTR0000001","chasis":"9GAJC6915FB040270","vin":"9GAJC6915FB040270","fechaMatricula":"15/03/2023","organismoTransito":"SECRETARIA DISTRITAL DE MOVILIDAD DE BOGOTA","estado":"activo","clase":"CAMIONETA","puertas":5,"pasajerosSentados":5,"licenciaTransito":"10035451456","regrabados":[],"repotenciado":false,"importado":false}},"soat":{"status":"ok","data":{"vigente":true,"aseguradora":"SBS SEGUROS","poliza":"1508006948335000","fechaExpedicion":"20/09/2025","fechaVencimiento":"19/09/2026","diasParaVencer":69}},"rtm":{"status":"ok","data":{"vigente":true,"cda":"CDA FONTIBON S.A.S","fechaExpedicion":"22/09/2025","fechaVencimiento":"22/09/2026","diasParaVencer":72,"certificadoNumero":"189733821"}},"antecedentes":{"status":"ok","data":{"prendas":[{"acreedor":"RCI COLOMBIA S.A. COMPAÑIA DE FINANCIAMIENTO","docAcreedor":"900977629","fechaInscripcion":"2021-09-30","confecamaras":true}],"embargos":[],"historicoPropietarios":1}},"simit":{"status":"ok","data":{"totalDeuda":0,"totalMultas":0,"multas":[],"acuerdosPago":0,"pazSalvo":true,"suspendida":false,"cancelada":false,"cursos":0}},"impuestos":{"source":"Bogotá D.C.","status":"warn","data":{"departamento":"Bogotá D.C.","anios":[{"anio":2024,"valor":412000,"pagado":true},{"anio":2025,"valor":438000,"pagado":true},{"anio":2026,"valor":465000,"pagado":false}],"totalPendiente":465000},"portalUrl":"https://www.haciendabogota.gov.co/es/sdh/pagos-impuesto-vehiculos"},"fasecolda":{"status":"info","data":{"codigo":"05636023","valorComercial":109100000,"rangoMercado":{"min":109100000,"max":109100000},"clase":"CAMIONETA PASAJ.","fichaTecnica":{"cilindraje":2488,"potencia":186,"combustible":"GASOLINA","transmision":"4X4","tipoCaja":"TIPTRONICA","traccion":"DOBLE","peso":1520,"puertas":5,"capacidadPasajeros":5,"airbags":7,"abs":true,"frenos":"DISCO/DISCO","tipoDireccion":"ELÉCTRICA","tipoFaros":"LED","aireAcondicionado":true,"sunroof":true,"camaraReversa":true,"sensoresParqueo":true,"tapiceriaCuero":true,"nacionalidad":"MEX","importado":true}}},"picoYPlaca":{"status":"ok","data":[{"ciudad":"Bogotá","tipoVehiculo":"carro","hoyAplica":false,"manianaAplica":true,"digitosHoy":[1,2,3,4,5],"digitosManiana":[6,7,8,9,0],"horarios":"L–V, 6:00–21:00","vigencia":"Vigente en julio de 2026"}]},"licencia":{"data":{"documentType":"CC","documentNumber":"1020304050","fullName":"J**N P***Z","driverStatus":"ACTIVO","totalLicenses":"1","licenses":[{"category":"B1","status":"ACTIVA","expeditionDate":"23/04/2025","dueDate":"23/04/2035"}],"infractions":{"tieneMultas":"NO"}}},"cost":3};
+const SAMPLE = {"sandbox":true,"input":{"placa":"ABC123","docType":"CC","docNumber":"1020304050"},"mode":"live","generatedAt":"2026-07-24T15:04:05.000Z","vehicle":{"source":"vehiculo","status":"ok","data":{"placa":"ABC123","marca":"MAZDA","linea":"CX-30","modelo":2023,"cilindraje":2000,"combustible":"GASOLINA","servicio":"Particular","carroceria":"CAMIONETA","color":"ROJO","motor":"MTR0000001","chasis":"9GAJC6915FB040270","vin":"9GAJC6915FB040270","fechaMatricula":"15/03/2023","organismoTransito":"SECRETARIA DISTRITAL DE MOVILIDAD DE BOGOTA","estado":"activo","clase":"CAMIONETA","puertas":5,"pasajerosSentados":5,"licenciaTransito":"10035451456","regrabados":[],"repotenciado":false,"importado":false}},"soat":{"status":"ok","data":{"vigente":true,"aseguradora":"SBS SEGUROS","poliza":"1508006948335000","fechaExpedicion":"20/09/2025","fechaVencimiento":"19/09/2026","diasParaVencer":69}},"rtm":{"status":"ok","data":{"vigente":true,"cda":"CDA FONTIBON S.A.S","fechaExpedicion":"22/09/2025","fechaVencimiento":"22/09/2026","diasParaVencer":72,"certificadoNumero":"189733821"}},"antecedentes":{"status":"ok","data":{"prendas":[{"acreedor":"RCI COLOMBIA S.A. COMPAÑIA DE FINANCIAMIENTO","docAcreedor":"900977629","fechaInscripcion":"2021-09-30","confecamaras":true}],"embargos":[],"historicoPropietarios":1}},"simit":{"status":"ok","data":{"totalDeuda":0,"totalMultas":0,"multas":[],"acuerdosPago":0,"pazSalvo":true,"suspendida":false,"cancelada":false,"cursos":0}},"impuestos":{"source":"Bogotá D.C.","status":"warn","data":{"departamento":"Bogotá D.C.","anios":[{"anio":2024,"valor":412000,"pagado":true},{"anio":2025,"valor":438000,"pagado":true},{"anio":2026,"valor":465000,"pagado":false}],"totalPendiente":465000},"portalUrl":"https://www.haciendabogota.gov.co/es/sdh/pagos-impuesto-vehiculos"},"fasecolda":{"status":"info","data":{"codigo":"05636023","valorComercial":109100000,"rangoMercado":{"min":109100000,"max":109100000},"clase":"CAMIONETA PASAJ.","fichaTecnica":{"cilindraje":2488,"potencia":186,"combustible":"GASOLINA","transmision":"4X4","tipoCaja":"TIPTRONICA","traccion":"DOBLE","peso":1520,"puertas":5,"capacidadPasajeros":5,"airbags":7,"abs":true,"frenos":"DISCO/DISCO","tipoDireccion":"ELÉCTRICA","tipoFaros":"LED","aireAcondicionado":true,"sunroof":true,"camaraReversa":true,"sensoresParqueo":true,"tapiceriaCuero":true,"nacionalidad":"MEX","importado":true}}},"picoYPlaca":{"status":"ok","data":[{"ciudad":"Bogotá","tipoVehiculo":"carro","hoyAplica":false,"manianaAplica":true,"digitosHoy":[1,2,3,4,5],"digitosManiana":[6,7,8,9,0],"horarios":"L–V, 6:00–21:00","vigencia":"Vigente en julio de 2026"}]},"licencia":{"data":{"documentType":"CC","documentNumber":"1020304050","fullName":"J**N P***Z","driverStatus":"ACTIVO","totalLicenses":"1","licenses":[{"category":"B1","status":"ACTIVA","expeditionDate":"23/04/2025","dueDate":"23/04/2035"}],"infractions":{"tieneMultas":"NO"}}},"siniestros":{"perdidaTotal":false,"totalSiniestros":0,"siniestros":[]},"cost":3};
 
 /* ================================================================
    CAPA DE PROVEEDOR — aquí se enchufa la API real.
@@ -447,7 +473,14 @@ function vence(dias){ if(dias==null) return 'info'; if(dias<0) return 'bad'; if(
    ================================================================ */
 let creditos = 4;              // valor demo cuando no hay backend
 let sesion = null;
-const COSTO = 1;               // 1 crédito = $5.000
+let tipoInforme = 'basico';
+const COSTOS = { basico:3, avanzado:5 };          // créditos que descuenta cada informe
+const PRECIOS = { basico:5000, avanzado:10000 };  // precio de referencia mostrado en pantalla
+const COSTO = () => COSTOS[tipoInforme];
+function cambiarTipoInforme(){
+  tipoInforme = document.querySelector('input[name="tipoInforme"]:checked').value;
+  $('#costNote').innerHTML = `Costo: <b>${money(PRECIOS[tipoInforme])}</b> por consulta · ${COSTOS[tipoInforme]} créditos`;
+}
 function pintarWallet(){ const el=$('#walletCr'); if(el) el.textContent = creditos; }
 
 let toastT;
@@ -627,7 +660,7 @@ function calcularRiesgo(r){
   if((a.embargos||[]).length) push('rojo', `Embargo(s) vigente(s): ${a.embargos.length}`);
   if(v.estado && v.estado.toLowerCase()!=='activo') push('rojo', `Estado del registro: ${v.estado}`);
   if((v.regrabados||[]).length) push('rojo', 'Regrabación de seriales detectada');
-  if((r.siniestros||[]).some(x=>/total/i.test(x.protection||''))) push('rojo', 'Pérdida total registrada en siniestros');
+  if(r.siniestros?.perdidaTotal) push('rojo', 'Pérdida total registrada (Fasecolda)');
 
   if((a.prendas||[]).length) push('amarillo', `Prenda vigente ante ${a.prendas[0].acreedor.split(' ').slice(0,3).join(' ')}…`);
   if(imp && imp.totalPendiente>0) push('amarillo', `Impuesto pendiente: ${money(imp.totalPendiente)}`);
@@ -691,7 +724,8 @@ function renderInforme(r){
   // Pico y placa (si viene)
   const pp = (r.picoYPlaca?.data||[])[0]||null;
   // Siniestros
-  const sinArr = r.siniestros;
+  const sinData = r.siniestros; // { perdidaTotal, totalSiniestros, siniestros:[{fecha, amparo, severidad}] } — solo si se pidió el informe Avanzado
+  const sinArr = sinData?.siniestros;
 
   $('#informeBody').innerHTML = `
   <div class="report-logo-print"><img src="logo.png" alt="VehiTrack" /></div>
@@ -777,8 +811,14 @@ function renderInforme(r){
 
     <!-- Siniestros -->
     <div class="rcard">
-      <div class="rc-head">${icoBox('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<h3>Siniestros (Fasecolda)</h3>${badge(sinArr?(sinArr.length?'warn':'ok'):'info')}</div>
-      ${sinArr ? (sinArr.length? sinArr.map(x=>row(fmtDate(x.accidentDate), x.protection)).join('') : `<div class="empty-sec">Sin siniestros con reclamación registrados</div>`) : `<div class="empty-sec">Siniestros no disponibles para esta consulta.</div>`}
+      <div class="rc-head">${icoBox('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<h3>Siniestros y pérdida total</h3>${sinData?(sinData.perdidaTotal?badge('bad'):badge(sinArr?.length?'warn':'ok')):badge('info')}</div>
+      ${sinData ? (
+        (sinArr&&sinArr.length) ? `
+          ${sinData.perdidaTotal? `<div class="empty-sec" style="background:var(--rojo-soft);color:var(--rojo-dp);font-weight:700">⚠ Este vehículo registra pérdida total</div>`:''}
+          ${sinArr.map(x=>row(fmtDate(x.fecha), `${x.amparo||''} <span class="tag ${x.severidad==='mayor'?'bad':'warn'}">${x.severidad==='mayor'?'Mayor cuantía':'Menor cuantía'}</span>`)).join('')}
+          <div class="note">Cobertura desde 2008, solo vehículos que estuvieron asegurados.</div>
+        ` : `<div class="empty-sec">Sin siniestros registrados desde 2008 (solo cubre vehículos que estuvieron asegurados; que no aparezca no garantiza que nunca haya chocado).</div>`
+      ) : `<div class="empty-sec">Este dato solo viene en el Informe Avanzado.</div>`}
     </div>
 
     <!-- Ficha técnica -->
@@ -854,16 +894,16 @@ async function consultar(){
 
   // Requiere sesión cuando hay backend; en demo el saldo es local.
   if(sb && !sesion){ abrirLogin(); return; }
-  if(!sb && creditos < COSTO){ abrirRecarga(); return; }
+  if(!sb && creditos < COSTO()){ abrirRecarga(); return; }
 
   mostrar('vLoading');
   const msgs = ['Consultando el RUNT…','Verificando SOAT y tecnomecánica…','Revisando multas e impuestos…','Consultando Fasecolda y antecedentes…','Calculando semáforo de riesgo…'];
   let i=0; const t=setInterval(()=>{ $('#loadMsg').textContent = msgs[i++%msgs.length]; }, 380);
 
   try{
-    const res = await PROVIDER.consultar({ placa, docType, docNumber, primerApellido, ciudad });
+    const res = await PROVIDER.consultar({ placa, docType, docNumber, primerApellido, ciudad, tipo: tipoInforme });
     // saldo: lo define el servidor; en demo se descuenta localmente.
-    if(res.saldo != null){ creditos = res.saldo; } else { creditos -= COSTO; }
+    if(res.saldo != null){ creditos = res.saldo; } else { creditos -= COSTO(); }
     pintarWallet();
     renderInforme(res.informe);
     clearInterval(t);
