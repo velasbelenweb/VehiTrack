@@ -176,7 +176,6 @@ a{ color:inherit; text-decoration:none; }
 }
 @media (max-width:520px){
   .form-row{ grid-template-columns:1fr; }
-  .hd .lnk{ display:none; }
   .wrap{ padding-inline:22px; }
   .consulta-in{ padding-block:48px 56px; }
   .sheet{ padding:22px; }
@@ -325,8 +324,6 @@ const SAMPLE = {"sandbox":true,"input":{"placa":"ABC123","docType":"CC","docNumb
    CAPA DE PROVEEDOR — aquí se enchufa la API real.
    ================================================================ */
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
-
 /* ================================================================
    Utilidades
    ================================================================ */
