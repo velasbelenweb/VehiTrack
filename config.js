@@ -8,15 +8,21 @@
    Secret, Wompi Private Key) van SOLO como variables de entorno de
    las Edge Functions en Supabase — nunca aquí ni en ningún archivo
    que subas a Git/Render.
+
+   Reemplaza los 4 valores de abajo y sube este archivo junto al
+   HTML (mismo folder) al hosting estático (Render Static Site).
    ================================================================ */
 window.VEHITRACK_CONFIG = {
-  SUPABASE_URL: "https://ncousntgxauqgfoqsaxh.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jb3VzbnRneGF1cWdmb3FzYXhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Njk0NTksImV4cCI6MjEwNjM0NTQ1OX0.nCY2dHyTNYzEFfz_ZcUS1OlXU8QEgrBwFSHNdS2pJCg",
+  // Panel de Supabase → Project Settings → API → Project URL
+  SUPABASE_URL: "https://TU-PROYECTO.supabase.co",
+
+  // Panel de Supabase → Project Settings → API → anon public key
+  SUPABASE_ANON_KEY: "TU-LLAVE-ANON-PUBLICA",
 
   // Panel de Wompi → Configuración → Llaves → Llave pública
   // Usa pub_test_... en sandbox y pub_prod_... en producción.
-  WOMPI_PUBLIC_KEY: "pub_prod_PTEmMk27pwBZLnlKJveokxlc67CUVoKY",
+  WOMPI_PUBLIC_KEY: "pub_test_TU-LLAVE-PUBLICA",
 
   // Sandbox: https://sandbox.wompi.co/v1  |  Producción: https://production.wompi.co/v1
-  WOMPI_API_URL: "https://xxkcxktvzpyrrgsrubjq.supabase.co/functions/v1/wompi-webhook"
+  WOMPI_API_URL: "https://sandbox.wompi.co/v1"
 };
