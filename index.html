@@ -162,6 +162,12 @@ a{ color:inherit; text-decoration:none; }
 .sheet h3{ font-family:'Poppins',sans-serif; font-weight:700; font-size:1.4rem; margin-bottom:6px; }
 .sheet p{ color:var(--muted); font-size:14px; margin-bottom:20px; }
 .sheet .x{ position:absolute; }
+.recargas{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:18px; }
+.rec{ border:1px solid var(--line); border-radius:12px; padding:14px 8px; font-weight:700; cursor:pointer; transition:border-color .15s, background .15s; }
+.rec:hover{ border-color:var(--brand); background:var(--brand-soft); }
+.rec .v{ font-family:'Poppins',sans-serif; font-size:1.15rem; }
+.pay-methods{ display:flex; gap:8px; justify-content:center; margin-bottom:18px; flex-wrap:wrap; }
+.pm{ font-family:'JetBrains Mono',monospace; font-size:11px; background:#f2f4f7; border:1px solid var(--line); padding:5px 10px; border-radius:7px; color:var(--muted); }
 .sheet-close{ font-size:13.5px; color:var(--muted); text-decoration:underline; }
 
 .footer{ background:var(--ink-2); color:rgba(255,255,255,.6); padding:28px 0; text-align:center; font-size:13px; }
@@ -206,6 +212,10 @@ a{ color:inherit; text-decoration:none; }
     </a>
     <div class="sp"></div>
     <button class="lnk" id="loginBtn" onclick="abrirLogin()" hidden>Ingresar</button>
+    <div class="wallet" id="walletChip" hidden>
+      <span class="wl-txt">Saldo</span> <span class="cr" id="walletCr">$0</span>
+      <button class="rc" onclick="abrirRecarga()">Recargar</button>
+    </div>
     <span class="wallet" id="acctChip" hidden style="gap:10px">
       <span class="who" id="acctEmail" style="font-size:12.5px;color:var(--muted)"></span>
       <button class="rc" onclick="logout()">Salir</button>
@@ -301,6 +311,23 @@ a{ color:inherit; text-decoration:none; }
   </div>
 </div>
 
+<!-- ============ MODAL RECARGA ============ -->
+<div class="overlay hidden" id="recargaOv">
+  <div class="sheet">
+    <h3>Recarga tu saldo</h3>
+    <p>Básico $5.000 · Avanzado $10.000 por consulta. Recarga y descuenta de tu saldo cuando quieras.</p>
+    <div class="recargas">
+      <button class="rec" onclick="recargar(20000)"><div class="v">$20.000</div></button>
+      <button class="rec" onclick="recargar(50000)"><div class="v">$50.000</div></button>
+      <button class="rec" onclick="recargar(100000)"><div class="v">$100.000</div></button>
+    </div>
+    <div class="pay-methods">
+      <span class="pm">Nequi</span><span class="pm">PSE</span><span class="pm">Tarjeta</span><span class="pm">Bancolombia</span>
+    </div>
+    <button class="sheet-close" onclick="cerrarRecarga()">Ahora no</button>
+  </div>
+</div>
+
 <div class="toast" id="toast" style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:13px 20px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:80;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none"></div>
 
 
@@ -336,6 +363,7 @@ function vence(dias){ if(dias==null) return 'info'; if(dias<0) return 'bad'; if(
    Sesión y tipo de informe (pago directo, sin wallet)
    ================================================================ */
 let sesion = null;
+let saldo = 0;
 let tipoInforme = 'basico';
 const PRECIOS = { basico:5000, avanzado:10000 };  // precio por consulta individual
 function cambiarTipoInforme(){
@@ -347,10 +375,16 @@ function toast(msg){ const t=$('#toast'); if(!t) return; t.textContent=msg; t.st
 
 /* --- Estado de sesión en el header --- */
 function pintarSesion(){
-  const login=$('#loginBtn'), acct=$('#acctChip');
-  if(!sb){ login.hidden=true; acct.hidden=true; return; }      // modo demo
-  if(sesion){ login.hidden=true; acct.hidden=false; $('#acctEmail').textContent=sesion.user.email; }
-  else { login.hidden=false; acct.hidden=true; }
+  const login=$('#loginBtn'), acct=$('#acctChip'), wallet=$('#walletChip');
+  if(!sb){ login.hidden=true; acct.hidden=true; wallet.hidden=true; return; }      // modo demo
+  if(sesion){ login.hidden=true; acct.hidden=false; wallet.hidden=false; $('#acctEmail').textContent=sesion.user.email; }
+  else { login.hidden=false; acct.hidden=true; wallet.hidden=true; }
+}
+function pintarWallet(){ const el=$('#walletCr'); if(el) el.textContent = money(saldo); }
+async function cargarSaldo(){
+  if(!sb || !sesion) return;
+  const { data } = await sb.from('wallets').select('creditos').maybeSingle();
+  saldo = data?.creditos ?? 0; pintarWallet();
 }
 
 /* --- Login / logout --- */
@@ -407,18 +441,21 @@ async function logout(){ await sb.auth.signOut(); }
 
 /* --- Recarga (Wompi: Nequi, PSE, tarjeta) --- */
 /* ================================================================
-   Pago directo por consulta (Wompi) — sin wallet ni planes
-   ----------------------------------------------------------------
-   `consulta-firma` crea la solicitud pendiente y devuelve la firma
-   de integridad; redirigimos al checkout hospedado de Wompi (igual
-   mecanismo que antes usaban las recargas). Guardamos la referencia
-   en sessionStorage para poder recuperar el informe cuando el
-   usuario vuelva del pago.
+   Recarga de saldo (Wompi) — el saldo se descuenta al instante al
+   consultar, sin pasar por Wompi en cada consulta individual.
    ================================================================ */
-async function iniciarPagoConsulta(datos){
-  const { data, error } = await sb.functions.invoke('consulta-firma', { body: datos });
-  if(error || !data?.reference){ throw new Error('No pudimos iniciar el pago. Intenta de nuevo.'); }
-  sessionStorage.setItem('vt_pendiente', data.reference);
+function abrirRecarga(){ if(sb && !sesion){ abrirLogin(); return; } $('#recargaOv').classList.remove('hidden'); }
+function cerrarRecarga(){ $('#recargaOv').classList.add('hidden'); }
+async function recargar(monto){
+  if(!sb){ // vista previa: Supabase/Wompi aún no están conectados
+    saldo += monto; pintarWallet(); cerrarRecarga();
+    toast('Vista previa: se simuló la recarga (Wompi aún no está conectado).');
+    return;
+  }
+  cerrarRecarga();
+  toast('Preparando el pago seguro…');
+  const { data, error } = await sb.functions.invoke('recarga-firma', { body:{ monto } });
+  if(error || !data?.reference){ toast('No pudimos iniciar la recarga. Intenta de nuevo.'); return; }
   const f = document.createElement('form');
   f.method='GET'; f.action='https://checkout.wompi.co/p/';
   const add=(k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=String(v); f.appendChild(i); };
@@ -429,29 +466,6 @@ async function iniciarPagoConsulta(datos){
   add('signature:integrity', data.signature);
   add('redirect-url', location.origin + location.pathname);
   document.body.appendChild(f); f.submit();
-}
-
-async function recuperarInformePendiente(){
-  const ref = sessionStorage.getItem('vt_pendiente');
-  if(!ref || !sb) return;
-  mostrar('vLoading');
-  const msgs = ['Confirmando tu pago…','Consultando el RUNT…','Armando tu informe…'];
-  let i=0; const t=setInterval(()=>{ $('#loadMsg').textContent = msgs[i++%msgs.length]; }, 900);
-  let intentos=0;
-  const iv=setInterval(async()=>{
-    intentos++;
-    const { data, error } = await sb.functions.invoke('informe-estado', { body:{ reference: ref } });
-    if(!error && data?.estado==='listo'){
-      clearInterval(iv); clearInterval(t); sessionStorage.removeItem('vt_pendiente');
-      renderInforme(data.informe); mostrar('vInforme');
-    } else if(!error && data?.estado==='rechazado'){
-      clearInterval(iv); clearInterval(t); sessionStorage.removeItem('vt_pendiente');
-      mostrar('vConsulta'); toast('El pago fue rechazado. Intenta de nuevo.');
-    } else if(intentos>=20){ // ~1 min esperando confirmación del webhook
-      clearInterval(iv); clearInterval(t);
-      mostrar('vConsulta'); toast('Tu pago sigue procesándose. Si ya pagaste, refresca en un minuto.');
-    }
-  }, 3000);
 }
 
 /* ================================================================
@@ -712,12 +726,26 @@ async function consultar(){
     return;
   }
 
+  mostrar('vLoading');
+  const msgs = ['Consultando el RUNT…','Verificando SOAT y tecnomecánica…','Revisando multas e impuestos…','Consultando Fasecolda y antecedentes…','Calculando semáforo de riesgo…'];
+  let i=0; const t=setInterval(()=>{ $('#loadMsg').textContent = msgs[i++%msgs.length]; }, 380);
+
   try{
-    toast('Preparando el pago seguro…');
-    await iniciarPagoConsulta({ placa, docType, docNumber, primerApellido, ciudad, tipo: tipoInforme });
-    // iniciarPagoConsulta redirige el navegador a Wompi; si llega aquí, algo falló.
+    const { data, error } = await sb.functions.invoke('consulta', { body:{ placa, docType, docNumber, primerApellido, ciudad, tipo: tipoInforme } });
+    clearInterval(t);
+    if(error){
+      let pl=null; try{ pl=await error.context.json(); }catch(_){}
+      if(pl?.error==='saldo_insuficiente'){ mostrar('vConsulta'); abrirRecarga(); return; }
+      throw new Error(pl?.detalle || pl?.error || error.message);
+    }
+    if(data.saldo!=null){ saldo = data.saldo; pintarWallet(); }
+    renderInforme(data.informe);
+    mostrar('vInforme');
+    window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){
-    err.textContent = 'No pudimos iniciar el pago: '+(e.message||'error')+'. Intenta de nuevo.'; err.classList.remove('hidden');
+    clearInterval(t);
+    mostrar('vConsulta');
+    err.textContent = 'No pudimos completar la consulta: '+(e.message||'error')+'. Intenta de nuevo.'; err.classList.remove('hidden');
     console.error(e);
   }
 }
@@ -731,14 +759,15 @@ async function init(){
   pintarSesion();
   if(sb){
     const { data:{ session } } = await sb.auth.getSession();
-    sesion = session; pintarSesion();
-    sb.auth.onAuthStateChange((_e, s)=>{ sesion = s; pintarSesion(); });
+    sesion = session; pintarSesion(); await cargarSaldo();
+    sb.auth.onAuthStateChange(async (_e, s)=>{ sesion = s; pintarSesion(); if(s){ await cargarSaldo(); } });
 
-    // ¿Volvió del checkout de Wompi? Recuperar el informe pendiente.
+    // ¿Volvió del checkout de Wompi tras recargar? Confirmar y refrescar saldo.
     const params = new URLSearchParams(location.search);
     if(params.get('id')){
+      toast('Confirmando tu pago…');
       history.replaceState({}, '', location.pathname);
-      recuperarInformePendiente();
+      let tries=0; const iv=setInterval(async ()=>{ await cargarSaldo(); if(++tries>=5){ clearInterval(iv); toast('Saldo actualizado.'); } }, 2500);
     }
   }
 }

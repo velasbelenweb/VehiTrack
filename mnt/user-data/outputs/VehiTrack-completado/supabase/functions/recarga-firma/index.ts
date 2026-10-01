@@ -1,18 +1,17 @@
 // ================================================================
 //  VEHITRACK · Edge Function "recarga-firma"
 //  ----------------------------------------------------------------
-//  Genera la referencia y la "firma de integridad" que exige el
-//  checkout hospedado de Wompi (checkout.wompi.co/p/) antes de
-//  redirigir al usuario a pagar. La llave SECRETA de integridad de
-//  Wompi vive solo aquí, nunca en el frontend.
+//  Genera la referencia y la firma de integridad para que el usuario
+//  recargue su wallet en el checkout hospedado de Wompi. El webhook
+//  (`wompi-webhook`) es quien, al confirmar el pago, abona el saldo.
+//  El monto se acredita 1:1 (lo que paga es lo que queda de saldo).
 //
-//  Fórmula oficial de Wompi para la firma de integridad del widget:
+//  Fórmula de la firma de integridad de Wompi:
 //    sha256hex( `${reference}${amountInCents}${currency}${integritySecret}` )
 //
 //  Variables de entorno requeridas (Supabase → Edge Functions → Secrets):
 //    SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (las inyecta Supabase)
-//    WOMPI_PUBLIC_KEY        llave pública de Wompi (pub_test_... / pub_prod_...)
-//    WOMPI_INTEGRITY_SECRET  llave secreta de integridad (Configuración → Llaves)
+//    WOMPI_PUBLIC_KEY, WOMPI_INTEGRITY_SECRET
 //
 //  Desplegar:  supabase functions deploy recarga-firma
 // ================================================================
@@ -26,13 +25,8 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
 
-// Créditos que otorga cada monto de recarga (debe reflejar lo que
-// muestra el frontend en el modal de recarga).
-const TABLA_RECARGAS: Record<number, number> = {
-  20000: 4,
-  50000: 12,   // 10 + 2 de bono
-  100000: 25,  // 20 + 5 de bono
-};
+// Montos de recarga permitidos (pesos). Ajusta libremente la lista.
+const MONTOS_VALIDOS = [20000, 50000, 100000];
 
 async function sha256hex(str: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -55,8 +49,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const monto = Number(body?.monto);
-    const creditos = TABLA_RECARGAS[monto];
-    if (!monto || !creditos) return json({ error: "monto_invalido" }, 400);
+    if (!MONTOS_VALIDOS.includes(monto)) return json({ error: "monto_invalido" }, 400);
 
     const publicKey = Deno.env.get("WOMPI_PUBLIC_KEY");
     const secret = Deno.env.get("WOMPI_INTEGRITY_SECRET");
@@ -67,7 +60,7 @@ Deno.serve(async (req) => {
     const amountInCents = monto * 100;
 
     const { error: insErr } = await admin.from("recargas").insert({
-      user_id: userId, reference, monto_cents: amountInCents, creditos, estado: "pendiente",
+      user_id: userId, reference, monto_cents: amountInCents, estado: "pendiente",
     });
     if (insErr) return json({ error: "error_interno", detalle: insErr.message }, 500);
 

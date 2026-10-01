@@ -1,10 +1,9 @@
 // ================================================================
 //  VEHITRACK · Edge Function "wompi-webhook"
 //  ----------------------------------------------------------------
-//  Recibe el evento "transaction.updated" de Wompi para las consultas
-//  pagadas individualmente (referencia CONS-...): al aprobarse el
-//  pago, llama a PlacApi y deja el informe listo para que el
-//  frontend lo recoja (ver `informe-estado`).
+//  Recibe el evento "transaction.updated" de Wompi para las recargas
+//  de wallet (referencia AFV-...): al aprobarse el pago, abona el
+//  saldo correspondiente al usuario.
 //
 //  Valida el checksum del evento con el "Events Secret" de Wompi
 //  antes de confiar en el payload (así nadie puede simular un pago
@@ -18,12 +17,10 @@
 //  Variables de entorno requeridas (Supabase → Edge Functions → Secrets):
 //    SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (las inyecta Supabase)
 //    WOMPI_EVENTS_SECRET   (Wompi → Configuración → Llaves → Events secret)
-//    PLACAPI_API_KEY       (para armar el informe)
 //
 //  Desplegar:  supabase functions deploy wompi-webhook --no-verify-jwt
 // ================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { armarInforme } from "../_shared/placapi.ts";
 
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
@@ -67,33 +64,18 @@ Deno.serve(async (req) => {
     const aprobado = estado === "APPROVED";
     const fallido = estado === "DECLINED" || estado === "VOIDED" || estado === "ERROR";
 
-    if (!ref.startsWith("CONS-")) return json({ ok: true, ignorado: true });
+    if (!ref.startsWith("AFV-")) return json({ ok: true, ignorado: true });
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     if (aprobado) {
-      const { data: pend } = await admin.from("consultas_pendientes")
-        .update({ estado: "pagado", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
+      const { data: rec } = await admin.from("recargas")
+        .update({ estado: "aprobada", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
         .eq("reference", ref).eq("estado", "pendiente")
-        .select("id, user_id, placa, doc_type, doc_number, primer_apellido, ciudad, tipo").maybeSingle();
-      if (pend) {
-        try {
-          const informe = await armarInforme(pend.tipo, pend.placa, pend.doc_type, pend.doc_number, pend.primer_apellido, pend.ciudad);
-          const { data: c } = await admin.from("consultas").insert({
-            user_id: pend.user_id, placa: pend.placa, doc_type: pend.doc_type, doc_number: pend.doc_number,
-            payload: informe, source: "placapi", costo: 0,
-          }).select("id").single();
-          await admin.from("consultas_pendientes").update({
-            estado: "listo", informe_id: c!.id, updated_at: new Date().toISOString(),
-          }).eq("id", pend.id);
-        } catch (e) {
-          // Pagó, pero PlacApi falló: se deja "pagado" (no "listo") para
-          // poder reintentar/reembolsar manualmente; no se pierde el pago.
-          console.error("Error armando informe tras pago aprobado:", e);
-        }
-      }
+        .select("user_id, monto_cents").maybeSingle();
+      if (rec) await admin.rpc("sumar_creditos", { p_user: rec.user_id, p_creditos: Math.round(rec.monto_cents / 100) });
     } else if (fallido) {
-      await admin.from("consultas_pendientes").update({ estado: "rechazado", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
+      await admin.from("recargas").update({ estado: "rechazada", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
         .eq("reference", ref).eq("estado", "pendiente");
     }
 

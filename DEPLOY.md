@@ -1,7 +1,9 @@
 # Guía de despliegue — VehiTrack
 
-VehiTrack cobra **por consulta**, directo con Wompi — no hay wallet de
-créditos ni planes de suscripción. Básico $5.000 · Avanzado $10.000.
+VehiTrack usa un **saldo recargable** (wallet en pesos, sin "créditos"
+abstractos): recargas con Wompi, y cada consulta descuenta su costo
+directo — Básico $5.000 · Avanzado $10.000 — al instante, sin redirigir
+a Wompi en cada consulta.
 
 ## 1. Crear el proyecto de Supabase
 
@@ -16,20 +18,19 @@ créditos ni planes de suscripción. Básico $5.000 · Avanzado $10.000.
 
 Ejecuta, en este orden, en **SQL Editor → New query**:
 
-1. `verifica-backend.sql` (usuarios, tabla `consultas`, RLS)
-2. `verifica-consultas-pago.sql` (tabla `consultas_pendientes` para el pago por consulta)
+1. `verifica-backend.sql` (usuarios, wallet, tabla `consultas`, RLS)
+2. `verifica-wallet-recarga.sql` (tabla `recargas` + función `sumar_creditos`)
 
-> `verifica-pagos.sql` y `verifica-suscripciones.sql` quedaron **obsoletos**
-> (eran del viejo sistema de wallet/planes) — no hace falta correrlos en
-> una instalación nueva. Si ya los habías corrido antes, no pasa nada por
-> dejar esas tablas sin usar.
+> `verifica-consultas-pago.sql` y `verifica-suscripciones.sql` (de
+> versiones anteriores) quedaron obsoletos — no hace falta correrlos en
+> una instalación nueva.
 
 ## 3. Configurar tu comercio en Wompi
 
 1. Regístrate en https://comercios.wompi.co (o el sandbox: https://comercios.wompi.co/sandbox).
 2. En **Configuración → Llaves** copia:
    - **Llave pública** (`pub_test_...` / `pub_prod_...`) → va en `config.js`.
-   - **Llave secreta de integridad** → secreta, firma el checkout.
+   - **Llave secreta de integridad** → secreta, firma el checkout de recarga.
    - **Events secret** → secreta, valida los webhooks.
 
 ## 4. Desplegar las Edge Functions
@@ -49,12 +50,12 @@ supabase secrets set WOMPI_EVENTS_SECRET=tu_events_secret
 supabase secrets set PLACAPI_API_KEY=tu_llave_de_placapi
 ```
 
-Desplegar (son solo 3 funciones):
+Desplegar (3 funciones):
 
 ```bash
 supabase functions deploy wompi-webhook --no-verify-jwt
-supabase functions deploy consulta-firma
-supabase functions deploy informe-estado
+supabase functions deploy recarga-firma
+supabase functions deploy consulta
 ```
 
 En el panel de Wompi, configura el webhook apuntando a:
@@ -78,21 +79,25 @@ Directory `.`
 
 ## 7. Probar el flujo completo
 
-1. Regístrate/inicia sesión.
-2. Elige Básico o Avanzado, llena el formulario y da clic en "Consultar historial".
-3. Te redirige al checkout de Wompi — paga con una [tarjeta de prueba](https://docs.wompi.co/docs/colombia/tarjetas-de-prueba/) en sandbox.
-4. Al volver, la página espera unos segundos (el webhook confirma el pago y arma el informe) y muestra el resultado.
+1. Regístrate/inicia sesión (revisa que "Confirm email" esté como lo
+   quieras en Authentication → Settings).
+2. Dale "Recargar", elige un monto, paga con una
+   [tarjeta de prueba](https://docs.wompi.co/docs/colombia/tarjetas-de-prueba/) en sandbox.
+3. Al volver, el saldo debería actualizarse en unos segundos (lo
+   acredita el webhook).
+4. Elige Básico o Avanzado y consulta una placa — el informe aparece
+   al instante y el saldo baja $5.000 o $10.000.
+5. Para probar "sin saldo": si el saldo es menor al costo, la página
+   abre el modal de recarga automáticamente.
 
-## Cómo funciona el pago por consulta
+## Cómo funciona
 
-1. El usuario elige Básico/Avanzado y llena el formulario.
-2. `consulta-firma` guarda la solicitud en `consultas_pendientes` y devuelve
-   la firma para el checkout de Wompi.
-3. El navegador redirige a Wompi; el usuario paga.
-4. Wompi notifica a `wompi-webhook`, que llama a PlacApi, guarda el informe
-   en `consultas`, y marca la solicitud como `listo`.
-5. Al volver a la página, `informe-estado` se consulta cada pocos segundos
-   hasta que el informe esté listo, y se muestra.
+1. **Recargar**: `recarga-firma` crea la solicitud y firma el checkout
+   de Wompi. Al pagar, `wompi-webhook` confirma y abona el saldo
+   (`sumar_creditos`).
+2. **Consultar**: `consulta` descuenta el costo del saldo al instante
+   (`consumir_credito`, atómico — si no hay saldo, no cobra), llama a
+   PlacApi, y si PlacApi falla, reintegra el saldo (`reintegrar_credito`).
 
 ## Resumen de qué corre dónde
 
@@ -100,7 +105,7 @@ Directory `.`
 |---|---|
 | `index.html`, `config.js`, `logo.png` | Render (Static Site) |
 | `supabase/functions/wompi-webhook` | Supabase Edge Functions |
-| `supabase/functions/consulta-firma` | Supabase Edge Functions |
-| `supabase/functions/informe-estado` | Supabase Edge Functions |
+| `supabase/functions/recarga-firma` | Supabase Edge Functions |
+| `supabase/functions/consulta` | Supabase Edge Functions |
 | `supabase/functions/_shared/placapi.ts` | Módulo compartido (no se despliega solo) |
-| `verifica-backend.sql`, `verifica-consultas-pago.sql` | Supabase Postgres (SQL Editor) |
+| `verifica-backend.sql`, `verifica-wallet-recarga.sql` | Supabase Postgres (SQL Editor) |
