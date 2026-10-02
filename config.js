@@ -8,5 +8,5 @@
    ================================================================ */
 window.VEHITRACK_CONFIG = {
   SUPABASE_URL: "https://ncousntgxauqgfoqsaxh.supabase.co",
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4a2N4a3R2enB5cnJnc3J1YmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3NzU4NzksImV4cCI6MjEwNTM1MTg3OX0.LWZw0hrDLQuUIEVZbzbm7niyVliOIy_rwgDrbLG_SwQ"
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jb3VzbnRneGF1cWdmb3FzYXhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3Njk0NTksImV4cCI6MjEwNjM0NTQ1OX0.nCY2dHyTNYzEFfz_ZcUS1OlXU8QEgrBwFSHNdS2pJCg"
 };
