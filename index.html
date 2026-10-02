@@ -23,6 +23,7 @@
   --radius:15px; --shadow:0 6px 20px rgba(22,34,47,.09), 0 1px 3px rgba(22,34,47,.06);
 }
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+[hidden]{ display:none !important; }
 html{ scroll-behavior:smooth; overflow-x:hidden; }
 body{ font-family:'Inter',system-ui,sans-serif; background:var(--paper); color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; overflow-wrap:anywhere; }
 button{ font:inherit; cursor:pointer; border:none; background:none; color:inherit; }
@@ -437,7 +438,7 @@ async function registrar(){
     ok.classList.remove('hidden');
   }
 }
-async function logout(){ await sb.auth.signOut(); }
+async function logout(){ await sb.auth.signOut(); sesion = null; pintarSesion(); }
 
 /* --- Recarga (Wompi: Nequi, PSE, tarjeta) --- */
 /* ================================================================
