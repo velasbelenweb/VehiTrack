@@ -289,7 +289,10 @@ a{ color:inherit; text-decoration:none; }
 </main>
 
 <footer class="footer">
-  <div class="wrap"><b>VehiTrack</b> · Historial vehicular por placa · Barranquilla, Colombia</div>
+  <div class="wrap">
+    <b>VehiTrack</b> · Historial vehicular por placa · Barranquilla, Colombia
+    <div style="margin-top:8px;font-size:12.5px"><a href="terminos.html" style="color:rgba(255,255,255,.66)">Términos y Condiciones</a> · <a href="privacidad.html" style="color:rgba(255,255,255,.66)">Tratamiento de Datos Personales</a></div>
+  </div>
 </footer>
 
 <!-- ============ MODAL LOGIN ============ -->
@@ -301,6 +304,10 @@ a{ color:inherit; text-decoration:none; }
       <input id="lgEmail" type="email" placeholder="tu@correo.com" autocomplete="username" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px;margin-bottom:10px" />
       <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
     </div>
+    <label id="lgAcc" hidden style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);text-align:left;margin-bottom:12px">
+      <input type="checkbox" id="lgAccChk" style="width:16px;height:16px;margin-top:2px;flex-shrink:0" />
+      Acepto los <a href="terminos.html" target="_blank" style="color:var(--brand);font-weight:600">Términos y Condiciones</a> y la <a href="privacidad.html" target="_blank" style="color:var(--brand);font-weight:600">Política de Tratamiento de Datos Personales</a>.
+    </label>
     <div class="form-err hidden" id="lgErr" style="text-align:left;margin-bottom:12px"></div>
     <div class="form-err hidden" id="lgOk" style="text-align:left;margin-bottom:12px;color:var(--brand)"></div>
     <button class="btn-go" id="lgBtn" style="width:100%;justify-content:center" onclick="login()">Ingresar</button>
@@ -407,6 +414,7 @@ function pintarModoLogin(){
     $('#lgBtn').setAttribute('onclick','registrar()');
     $('#lgTogglePre').textContent = '¿Ya tienes cuenta?';
     $('#lgToggleLink').textContent = 'Ingresar';
+    $('#lgAcc').hidden = false;
   } else {
     $('#lgTitulo').textContent = 'Ingresar';
     $('#lgSub').textContent = 'Accede a tu cuenta para consultar y ver tu saldo.';
@@ -414,6 +422,7 @@ function pintarModoLogin(){
     $('#lgBtn').setAttribute('onclick','login()');
     $('#lgTogglePre').textContent = '¿No tienes cuenta?';
     $('#lgToggleLink').textContent = 'Crear cuenta';
+    $('#lgAcc').hidden = true;
   }
 }
 async function login(){
@@ -429,6 +438,7 @@ async function registrar(){
   err.classList.add('hidden'); ok.classList.add('hidden');
   if(!email||!password){ err.textContent='Escribe tu correo y contraseña.'; err.classList.remove('hidden'); return; }
   if(password.length<6){ err.textContent='La contraseña debe tener al menos 6 caracteres.'; err.classList.remove('hidden'); return; }
+  if(!$('#lgAccChk').checked){ err.textContent='Debes aceptar los Términos y Condiciones y el tratamiento de datos.'; err.classList.remove('hidden'); return; }
   const btn=$('#lgBtn'); btn.textContent='Creando cuenta…'; btn.disabled=true;
   const { data, error } = await sb.auth.signUp({ email, password });
   btn.disabled=false; btn.textContent='Crear cuenta';
