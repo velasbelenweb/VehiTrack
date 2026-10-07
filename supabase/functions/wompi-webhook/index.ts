@@ -38,7 +38,9 @@ async function checksumValido(body: any, eventsSecret: string) {
   const props: string[] = body?.signature?.properties;
   const checksumRecibido: string = body?.signature?.checksum;
   if (!props || !checksumRecibido) return false;
-  const concatenado = props.map((p) => String(leerRuta(body, p))).join("") + String(body.timestamp) + eventsSecret;
+  // Las rutas en signature.properties son relativas a "data" (ej. "transaction.id"),
+  // no a la raíz del payload — confirmado con un ejemplo real de Wompi.
+  const concatenado = props.map((p) => String(leerRuta(body.data, p))).join("") + String(body.timestamp) + eventsSecret;
   const calculado = await sha256hex(concatenado);
   return calculado.toUpperCase() === String(checksumRecibido).toUpperCase();
 }
@@ -50,8 +52,12 @@ Deno.serve(async (req) => {
 
     const eventsSecret = Deno.env.get("WOMPI_EVENTS_SECRET");
     if (!eventsSecret) {
-      console.warn("WOMPI_EVENTS_SECRET no configurado: el checksum del evento NO se está validando.");
-    } else if (!(await checksumValido(body, eventsSecret))) {
+      // Fallar CERRADO: sin el secreto no hay forma de verificar que el
+      // pago sea real, así que se rechaza en vez de confiar a ciegas.
+      console.error("WOMPI_EVENTS_SECRET no configurado: rechazando el webhook por seguridad.");
+      return json({ error: "webhook_no_configurado" }, 500);
+    }
+    if (!(await checksumValido(body, eventsSecret))) {
       return json({ error: "checksum_invalido" }, 401);
     }
 

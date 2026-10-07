@@ -2,8 +2,17 @@
 
 VehiTrack usa un **saldo recargable** (wallet en pesos, sin "créditos"
 abstractos): recargas con Wompi, y cada consulta descuenta su costo
-directo — Básico $5.000 · Avanzado $10.000 — al instante, sin redirigir
-a Wompi en cada consulta.
+directo — **$20.000, un solo informe combinado** — al instante, sin
+redirigir a Wompi en cada consulta.
+
+El informe combina **dos fuentes**, llamadas en paralelo:
+- **InfoSiniestral**: aseguradoras, SOAT, siniestros y avalúo comercial.
+- **PlacApi**: RUNT, situación legal, SOAT, tecnomecánica, multas
+  (SIMIT), impuestos, Fasecolda, pico y placa y licencia.
+
+Cada consulta además queda guardada en el historial de la cuenta del
+usuario (tabla `consultas`) y se envía una copia por correo al
+usuario con **Resend**.
 
 ## 1. Crear el proyecto de Supabase
 
@@ -33,6 +42,18 @@ Ejecuta, en este orden, en **SQL Editor → New query**:
    - **Llave secreta de integridad** → secreta, firma el checkout de recarga.
    - **Events secret** → secreta, valida los webhooks.
 
+## 3.1 Configurar Resend (copia del informe por correo)
+
+1. Crea una cuenta gratis en https://resend.com (hasta 3.000 correos/mes).
+2. **Verifica tu dominio** `vehitrack.app` en Resend → Domains → Add
+   Domain. Te va a pedir agregar unos registros DNS (TXT/CNAME) en
+   GoDaddy, igual que hiciste para apuntar el dominio a Render — te
+   guío cuando llegues a ese paso.
+3. En **API Keys**, crea una llave y cópiala (empieza con `re_...`).
+4. Sin verificar el dominio, Resend solo te deja enviar correos de
+   prueba a tu propia cuenta — para enviarle el informe a cualquier
+   usuario real, el dominio tiene que estar verificado.
+
 ## 4. Desplegar las Edge Functions
 
 ```bash
@@ -47,7 +68,10 @@ Secretos:
 supabase secrets set WOMPI_PUBLIC_KEY=pub_test_tu_llave_publica
 supabase secrets set WOMPI_INTEGRITY_SECRET=tu_llave_secreta_de_integridad
 supabase secrets set WOMPI_EVENTS_SECRET=tu_events_secret
+supabase secrets set INFOSINIESTRAL_API_KEY=isk_tu_llave_de_infosiniestral
 supabase secrets set PLACAPI_API_KEY=tu_llave_de_placapi
+supabase secrets set RESEND_API_KEY=re_tu_llave_de_resend
+supabase secrets set RESEND_FROM="VehiTrack <informes@vehitrack.app>"
 ```
 
 Desplegar (3 funciones):
@@ -85,9 +109,14 @@ Directory `.`
    [tarjeta de prueba](https://docs.wompi.co/docs/colombia/tarjetas-de-prueba/) en sandbox.
 3. Al volver, el saldo debería actualizarse en unos segundos (lo
    acredita el webhook).
-4. Elige Básico o Avanzado y consulta una placa — el informe aparece
-   al instante y el saldo baja $5.000 o $10.000.
-5. Para probar "sin saldo": si el saldo es menor al costo, la página
+4. Escribe una placa y el documento del propietario, y consulta — el
+   informe combinado aparece al instante, el saldo baja $20.000, la
+   consulta queda guardada en tu historial, y te debería llegar una
+   copia por correo en unos segundos (revisa spam la primera vez).
+5. Desde el informe puedes descargarlo como PDF (botón "Descargar
+   PDF", usa la función de imprimir del navegador) o compartirlo por
+   WhatsApp (abre WhatsApp con un resumen del informe).
+6. Para probar "sin saldo": si el saldo es menor al costo, la página
    abre el modal de recarga automáticamente.
 
 ## Cómo funciona
@@ -95,9 +124,14 @@ Directory `.`
 1. **Recargar**: `recarga-firma` crea la solicitud y firma el checkout
    de Wompi. Al pagar, `wompi-webhook` confirma y abona el saldo
    (`sumar_creditos`).
-2. **Consultar**: `consulta` descuenta el costo del saldo al instante
-   (`consumir_credito`, atómico — si no hay saldo, no cobra), llama a
-   PlacApi, y si PlacApi falla, reintegra el saldo (`reintegrar_credito`).
+2. **Consultar**: `consulta` descuenta $20.000 del saldo al instante
+   (`consumir_credito`, atómico — si no hay saldo, no cobra), y llama
+   EN PARALELO a InfoSiniestral y a PlacApi. Si una de las dos falla,
+   el informe sale con esa parte vacía y la otra completa; si fallan
+   las dos, se reintegra el saldo y no se cobra. El resultado se
+   guarda en `consultas` (historial de la cuenta) y se envía una
+   copia por correo con Resend — si el correo falla, no se revierte
+   el cobro, porque la consulta ya se prestó.
 
 ## Resumen de qué corre dónde
 
@@ -107,5 +141,7 @@ Directory `.`
 | `supabase/functions/wompi-webhook` | Supabase Edge Functions |
 | `supabase/functions/recarga-firma` | Supabase Edge Functions |
 | `supabase/functions/consulta` | Supabase Edge Functions |
+| `supabase/functions/_shared/infosiniestral.ts` | Módulo compartido (no se despliega solo) |
 | `supabase/functions/_shared/placapi.ts` | Módulo compartido (no se despliega solo) |
+| `supabase/functions/_shared/email-informe.ts` | Módulo compartido (no se despliega solo) |
 | `verifica-backend.sql`, `verifica-wallet-recarga.sql` | Supabase Postgres (SQL Editor) |

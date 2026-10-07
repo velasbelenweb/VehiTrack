@@ -3,8 +3,8 @@
    ----------------------------------------------------------------
    Este archivo NO debe llevar llaves secretas. Solo la URL de tu
    proyecto de Supabase y la llave ANON (pública, protegida por RLS).
-   Las llaves de Wompi y PlacApi van SOLO como variables de entorno
-   de las Edge Functions en Supabase (secrets) — nunca aquí.
+   Las llaves de Wompi e InfoSiniestral van SOLO como variables de
+   entorno de las Edge Functions en Supabase (secrets) — nunca aquí.
    ================================================================ */
 window.VEHITRACK_CONFIG = {
   SUPABASE_URL: "https://ncousntgxauqgfoqsaxh.supabase.co",
