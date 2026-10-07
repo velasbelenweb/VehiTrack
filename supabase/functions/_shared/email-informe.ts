@@ -24,7 +24,20 @@ function tarjeta(titulo: string, contenidoHtml: string) {
   </div>`;
 }
 
-export function construirEmailInforme(informe: any, placa: string): string {
+function esc(s: unknown): string {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+// Escapa recursivamente todo texto de proveedores externos antes de meterlo en el HTML del correo.
+function sanear(x: any): any {
+  if (typeof x === "string") return esc(x);
+  if (Array.isArray(x)) return x.map(sanear);
+  if (x && typeof x === "object") { const o: any = {}; for (const k in x) o[esc(k)] = sanear(x[k]); return o; }
+  return x;
+}
+
+export function construirEmailInforme(informeCrudo: any, placaCruda: string): string {
+  const informe = sanear(informeCrudo);
+  const placa = esc(placaCruda);
   const info = informe?.infosiniestral;
   const pla = informe?.placapi;
 

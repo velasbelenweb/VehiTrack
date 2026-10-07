@@ -20,7 +20,7 @@
 //
 //  Desplegar:  supabase functions deploy wompi-webhook --no-verify-jwt
 // ================================================================
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
@@ -42,7 +42,11 @@ async function checksumValido(body: any, eventsSecret: string) {
   // no a la raíz del payload — confirmado con un ejemplo real de Wompi.
   const concatenado = props.map((p) => String(leerRuta(body.data, p))).join("") + String(body.timestamp) + eventsSecret;
   const calculado = await sha256hex(concatenado);
-  return calculado.toUpperCase() === String(checksumRecibido).toUpperCase();
+  const a = calculado.toUpperCase(), b = String(checksumRecibido).toUpperCase();
+  if (a.length !== b.length) return false;
+  let diff = 0; // comparación en tiempo constante
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 Deno.serve(async (req) => {
@@ -87,6 +91,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true });
   } catch (e) {
-    return json({ error: "error_interno", detalle: String(e) }, 500);
+    console.error(e);
+    return json({ error: "error_interno" }, 500);
   }
 });

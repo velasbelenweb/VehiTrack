@@ -2,6 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; form-action 'self' https://checkout.wompi.co; base-uri 'self'; object-src 'none'" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>VehiTrack — Historial vehicular por placa</title>
 <meta name="description" content="Consulta el historial completo de cualquier vehículo por placa: RUNT, SOAT, tecnomecánica, multas, impuestos, avalúo, antecedentes, aseguradoras y siniestros, con semáforo de riesgo." />
@@ -315,7 +318,7 @@ a{ color:inherit; text-decoration:none; }
 <div class="toast" id="toast" style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:13px 20px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:80;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none"></div>
 
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <script src="config.js"></script>
 <script>
 /* ================================================================
@@ -407,7 +410,7 @@ async function registrar(){
   const email=$('#lgEmail').value.trim(), password=$('#lgPass').value, err=$('#lgErr'), ok=$('#lgOk');
   err.classList.add('hidden'); ok.classList.add('hidden');
   if(!email||!password){ err.textContent='Escribe tu correo y contraseña.'; err.classList.remove('hidden'); return; }
-  if(password.length<6){ err.textContent='La contraseña debe tener al menos 6 caracteres.'; err.classList.remove('hidden'); return; }
+  if(password.length<8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)){ err.textContent='La contraseña debe tener al menos 8 caracteres, con letras y números.'; err.classList.remove('hidden'); return; }
   if(!$('#lgAccChk').checked){ err.textContent='Debes aceptar los Términos y Condiciones y el tratamiento de datos.'; err.classList.remove('hidden'); return; }
   const btn=$('#lgBtn'); btn.textContent='Creando cuenta…'; btn.disabled=true;
   const { data, error } = await sb.auth.signUp({ email, password });
@@ -521,8 +524,18 @@ function asegVigenteBadge(lista){ return lista.some(a=>esVigente(a.estado)) ? 'o
 
 let ultimoInforme = null; // para el botón de WhatsApp
 
-function renderInforme(r){
-  ultimoInforme = r;
+// Escapa recursivamente TODO texto que viene de proveedores externos antes de pintarlo con innerHTML.
+function sanear(x){
+  if(typeof x==='string') return escHtml(x);
+  if(Array.isArray(x)) return x.map(sanear);
+  if(x && typeof x==='object'){ const o={}; for(const k in x) o[escHtml(k)] = sanear(x[k]); return o; }
+  return x;
+}
+
+function renderInforme(raw){
+  ultimoInforme = raw;            // crudo, solo para el texto de WhatsApp
+  const r = sanear(raw);          // saneado, para el HTML
+  const escHtml = x => x ?? '';   // ya está escapado arriba; evita doble escape
   const folio = 'VHT-' + (r.placa||'') + '-' + Date.now().toString(36).toUpperCase().slice(-6);
 
   const info = (r.infosiniestral && !r.infosiniestral.sinResultados) ? r.infosiniestral : null;
@@ -741,7 +754,9 @@ function compartirWhatsApp(){
 function mostrar(vista){ ['vConsulta','vLoading','vInforme'].forEach(id=>$('#'+id).classList.toggle('hidden', id!==vista)); }
 function irConsulta(){ mostrar('vConsulta'); window.scrollTo({top:0,behavior:'smooth'}); }
 
+let consultando = false;
 async function consultar(){
+  if(consultando) return;
   const placa = $('#placa').value.trim().toUpperCase();
   const docType = $('#docType').value;
   const docNumber = $('#docNumber').value.trim();
@@ -749,7 +764,7 @@ async function consultar(){
   const ciudad = $('#ciudad').value.trim();
   const err = $('#formErr'); err.classList.add('hidden');
 
-  if(placa.length<5){ err.textContent='Escribe una placa válida (ej. ABC123).'; err.classList.remove('hidden'); return; }
+  if(!/^[A-Z0-9]{5,7}$/.test(placa)){ err.textContent='Escribe una placa válida (ej. ABC123).'; err.classList.remove('hidden'); return; }
   if(docNumber.length<5){ err.textContent='Escribe el documento del propietario. El RUNT lo exige para entregar la ficha.'; err.classList.remove('hidden'); return; }
 
   if(sb && !sesion){ abrirLogin(); return; }
@@ -766,6 +781,7 @@ async function consultar(){
     return;
   }
 
+  consultando = true;
   mostrar('vLoading');
   const msgs = ['Consultando el RUNT…','Verificando SOAT y tecnomecánica…','Consultando aseguradoras y siniestros…','Revisando multas e impuestos…','Calculando semáforo de riesgo…'];
   let i=0; const t=setInterval(()=>{ $('#loadMsg').textContent = msgs[i++%msgs.length]; }, 380);
@@ -776,7 +792,8 @@ async function consultar(){
     if(error){
       let pl=null; try{ pl=await error.context.json(); }catch(_){}
       if(pl?.error==='saldo_insuficiente'){ mostrar('vConsulta'); abrirRecarga(); return; }
-      throw new Error(pl?.detalle || pl?.error || error.message);
+      const AMIGABLES = { demasiadas_consultas:'Hiciste muchas consultas seguidas. Espera un minuto.', placa_invalida:'La placa no es válida.', documento_invalido:'El documento no es válido.', proveedor_no_disponible:'Las fuentes no respondieron. No se te cobró; intenta en unos minutos.', no_autenticado:'Tu sesión expiró. Inicia sesión de nuevo.' };
+      throw new Error(AMIGABLES[pl?.error] || pl?.error || error.message);
     }
     if(data.saldo!=null){ saldo = data.saldo; pintarWallet(); }
     renderInforme(data.informe);
@@ -787,7 +804,7 @@ async function consultar(){
     mostrar('vConsulta');
     err.textContent = 'No pudimos completar la consulta: '+(e.message||'error')+'. Intenta de nuevo.'; err.classList.remove('hidden');
     console.error(e);
-  }
+  }finally{ consultando = false; }
 }
 
 $('#placa').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#docNumber').focus(); });

@@ -32,18 +32,22 @@
 //
 //  Desplegar:  supabase functions deploy consulta --no-verify-jwt
 // ================================================================
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { armarInforme as armarInformeInfoSiniestral } from "../_shared/infosiniestral.ts";
 import { armarInformePlacApi } from "../_shared/placapi.ts";
 import { construirEmailInforme } from "../_shared/email-informe.ts";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (o: unknown, s = 200) =>
-  new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
+const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
+function corsPara(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ORIGENES.includes(origin) ? origin : ORIGENES[0],
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
 
 const COSTO = 20000; // pesos, directo del wallet — un solo informe combinado
 
@@ -65,6 +69,9 @@ async function enviarCorreo(destino: string, placa: string, informe: any) {
 }
 
 Deno.serve(async (req) => {
+  const CORS = corsPara(req);
+  const json = (o: unknown, s = 200) =>
+    new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
 
@@ -86,16 +93,24 @@ Deno.serve(async (req) => {
     const docNumber: string | undefined = body?.docNumber;
     const primerApellido: string | undefined = body?.primerApellido;
     const ciudad: string | undefined = body?.ciudad;
-    if (!placa) return json({ error: "placa_requerida" }, 400);
-    if (!docNumber) return json({ error: "documento_requerido" }, 400);
+    if (!/^[A-Z0-9]{5,7}$/.test(placa)) return json({ error: "placa_invalida" }, 400);
+    if (!docNumber || !/^[A-Za-z0-9]{5,15}$/.test(docNumber)) return json({ error: "documento_invalido" }, 400);
+    if (docType && !["CC", "CE", "NIT", "PA", "TI", "PPT"].includes(docType)) return json({ error: "tipo_documento_invalido" }, 400);
+    if ((primerApellido ?? "").length > 40 || (ciudad ?? "").length > 60) return json({ error: "datos_invalidos" }, 400);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Límite de ritmo: máx. 5 consultas por minuto por usuario (frena abuso y dobles clics).
+    const hace1min = new Date(Date.now() - 60_000).toISOString();
+    const { count: recientes } = await admin.from("consultas").select("id", { count: "exact", head: true })
+      .eq("user_id", userId).gte("created_at", hace1min);
+    if ((recientes ?? 0) >= 5) return json({ error: "demasiadas_consultas" }, 429);
 
     // Cobro atómico contra el saldo del wallet (en pesos)
     const { data: restante, error: rpcErr } = await admin.rpc("consumir_credito", {
       p_user: userId, p_costo: COSTO,
     });
-    if (rpcErr) return json({ error: "error_interno", detalle: rpcErr.message }, 500);
+    if (rpcErr) { console.error("consumir_credito:", rpcErr.message); return json({ error: "error_interno" }, 500); }
     if (restante === -1) return json({ error: "saldo_insuficiente" }, 402);
 
     // Llamadas en paralelo a las dos fuentes
@@ -123,15 +138,17 @@ Deno.serve(async (req) => {
     // Si LAS DOS fallaron de verdad (sin ni siquiera "sin resultados"), se reintegra.
     if (!infosiniestral && !placapi) {
       await admin.rpc("reintegrar_credito", { p_user: userId, p_costo: COSTO });
-      return json({ error: "proveedor_no_disponible", detalle: infosiniestralError || placapiError }, 502);
+      console.error("Proveedores caídos:", infosiniestralError, placapiError);
+      return json({ error: "proveedor_no_disponible" }, 502);
     }
 
     const informe = { placa, infosiniestral, infosiniestralError, placapi, placapiError };
 
-    await admin.from("consultas").insert({
+    const { error: insErr } = await admin.from("consultas").insert({
       user_id: userId, placa, doc_type: docType, doc_number: docNumber,
       payload: informe, source: "infosiniestral+placapi", costo: COSTO,
     });
+    if (insErr) console.error("ALERTA: no se pudo guardar la consulta en el historial:", insErr.message);
 
     // Copia por correo — se espera a que termine (para no perderla si la
     // función se apaga apenas responde), pero si falla no revierte el cobro:
@@ -140,6 +157,7 @@ Deno.serve(async (req) => {
 
     return json({ informe, saldo: restante });
   } catch (e) {
-    return json({ error: "error_interno", detalle: String(e) }, 500);
+    console.error(e);
+    return json({ error: "error_interno" }, 500);
   }
 });

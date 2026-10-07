@@ -145,3 +145,25 @@ Directory `.`
 | `supabase/functions/_shared/placapi.ts` | Módulo compartido (no se despliega solo) |
 | `supabase/functions/_shared/email-informe.ts` | Módulo compartido (no se despliega solo) |
 | `verifica-backend.sql`, `verifica-wallet-recarga.sql` | Supabase Postgres (SQL Editor) |
+
+## Seguridad (hecho y pendiente de tu lado)
+
+Ya aplicado en el código: datos externos escapados (anti-XSS) en la
+página y en el correo, CORS limitado a `vehitrack.app`, validación de
+placa/documento, máx. 5 consultas por minuto por usuario, errores sin
+detalles internos, comparación segura de la firma del webhook,
+contraseña mínima de 8 con letras y números, versiones de librerías
+fijadas y política CSP en las páginas.
+
+Pasos manuales:
+1. **Supabase → Authentication → Providers → Email**: sube
+   "Minimum password length" a 8 y activa "Confirm email".
+2. **Render → tu Static Site → Settings → Headers**: agrega
+   `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+   `Referrer-Policy: strict-origin-when-cross-origin` y
+   `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+   (render.yaml solo aplica si usas Blueprint).
+3. Si pruebas desde otra URL (ej. `*.onrender.com`), agrega ese origen:
+   `supabase secrets set ALLOWED_ORIGINS="https://vehitrack.app,https://www.vehitrack.app,https://TU-APP.onrender.com"`
+4. Redespliega las 3 funciones (`consulta`, `recarga-firma`,
+   `wompi-webhook --no-verify-jwt`).

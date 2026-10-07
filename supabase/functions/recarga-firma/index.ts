@@ -15,15 +15,19 @@
 //
 //  Desplegar:  supabase functions deploy recarga-firma
 // ================================================================
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-const json = (o: unknown, s = 200) =>
-  new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
+const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
+function corsPara(req: Request) {
+  const origin = req.headers.get("Origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ORIGENES.includes(origin) ? origin : ORIGENES[0],
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
+
 
 // Montos de recarga permitidos (pesos). Ajusta libremente la lista.
 const MONTOS_VALIDOS = [5000, 10000, 20000, 50000, 100000];
@@ -34,6 +38,9 @@ async function sha256hex(str: string) {
 }
 
 Deno.serve(async (req) => {
+  const CORS = corsPara(req);
+  const json = (o: unknown, s = 200) =>
+    new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json", ...CORS } });
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
   try {
@@ -62,11 +69,12 @@ Deno.serve(async (req) => {
     const { error: insErr } = await admin.from("recargas").insert({
       user_id: userId, reference, monto_cents: amountInCents, estado: "pendiente",
     });
-    if (insErr) return json({ error: "error_interno", detalle: insErr.message }, 500);
+    if (insErr) { console.error("recargas insert:", insErr.message); return json({ error: "error_interno" }, 500); }
 
     const signature = await sha256hex(`${reference}${amountInCents}COP${secret}`);
     return json({ reference, amountInCents, publicKey, signature });
   } catch (e) {
-    return json({ error: "error_interno", detalle: String(e) }, 500);
+    console.error(e);
+    return json({ error: "error_interno" }, 500);
   }
 });
