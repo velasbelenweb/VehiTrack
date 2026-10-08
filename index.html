@@ -787,7 +787,8 @@ async function consultar(){
   let i=0; const t=setInterval(()=>{ $('#loadMsg').textContent = msgs[i++%msgs.length]; }, 380);
 
   try{
-    const { data, error } = await sb.functions.invoke('consulta', { body:{ placa, docType, docNumber, primerApellido, ciudad } });
+    const limite = new Promise((_, rej)=> setTimeout(()=> rej(new Error('La consulta tardó demasiado. Si se descontó saldo, aparecerá en tu historial; revisa y vuelve a intentar.')), 90000));
+    const { data, error } = await Promise.race([ sb.functions.invoke('consulta', { body:{ placa, docType, docNumber, primerApellido, ciudad } }), limite ]);
     clearInterval(t);
     if(error){
       let pl=null; try{ pl=await error.context.json(); }catch(_){}
@@ -817,7 +818,9 @@ async function init(){
   if(sb){
     const { data:{ session } } = await sb.auth.getSession();
     sesion = session; pintarSesion(); await cargarSaldo();
-    sb.auth.onAuthStateChange(async (_e, s)=>{ sesion = s; pintarSesion(); if(s){ await cargarSaldo(); } });
+    // OJO: dentro de este callback NO se debe hacer 'await' a otras llamadas de Supabase (bloquea la sesión y
+    // deja las consultas cargando para siempre). Por eso el saldo se pide fuera del callback, con setTimeout.
+    sb.auth.onAuthStateChange((_e, s)=>{ sesion = s; pintarSesion(); if(s){ setTimeout(()=>{ cargarSaldo(); }, 0); } });
 
     // ¿Volvió del checkout de Wompi tras recargar? Confirmar y refrescar saldo.
     const params = new URLSearchParams(location.search);
