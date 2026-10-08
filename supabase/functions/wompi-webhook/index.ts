@@ -21,6 +21,7 @@
 //  Desplegar:  supabase functions deploy wompi-webhook --no-verify-jwt
 // ================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { registrarEvento } from "../_shared/eventos.ts";
 
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { "content-type": "application/json" } });
@@ -50,6 +51,7 @@ async function checksumValido(body: any, eventsSecret: string) {
 }
 
 Deno.serve(async (req) => {
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
   try {
     const body = await req.json();
@@ -59,14 +61,22 @@ Deno.serve(async (req) => {
       // Fallar CERRADO: sin el secreto no hay forma de verificar que el
       // pago sea real, así que se rechaza en vez de confiar a ciegas.
       console.error("WOMPI_EVENTS_SECRET no configurado: rechazando el webhook por seguridad.");
+      await registrarEvento(admin, "error", "webhook_sin_secreto", null, {});
       return json({ error: "webhook_no_configurado" }, 500);
     }
     if (!(await checksumValido(body, eventsSecret))) {
+      // Tope anti-spam: este endpoint es público, no llenamos la tabla si lo bombardean.
+      const { count } = await admin.from("eventos").select("id", { count: "exact", head: true })
+        .eq("tipo", "webhook_checksum_invalido").gte("created_at", new Date(Date.now() - 60_000).toISOString());
+      if ((count ?? 0) < 10) await registrarEvento(admin, "error", "webhook_checksum_invalido", null, { reference: body?.data?.transaction?.reference ?? null });
       return json({ error: "checksum_invalido" }, 401);
     }
 
     const tx = body?.data?.transaction;
-    if (!tx?.reference || !tx?.status) return json({ error: "payload_incompleto" }, 400);
+    if (!tx?.reference || !tx?.status) {
+      await registrarEvento(admin, "warn", "webhook_payload_incompleto", null, {});
+      return json({ error: "payload_incompleto" }, 400);
+    }
 
     const ref: string = tx.reference;
     const estado: string = tx.status; // APPROVED | DECLINED | VOIDED | ERROR | PENDING
@@ -76,22 +86,29 @@ Deno.serve(async (req) => {
 
     if (!ref.startsWith("AFV-")) return json({ ok: true, ignorado: true });
 
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
     if (aprobado) {
       const { data: rec } = await admin.from("recargas")
         .update({ estado: "aprobada", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
         .eq("reference", ref).eq("estado", "pendiente")
         .select("user_id, monto_cents").maybeSingle();
-      if (rec) await admin.rpc("sumar_creditos", { p_user: rec.user_id, p_creditos: Math.round(rec.monto_cents / 100) });
+      if (rec) {
+        await admin.rpc("sumar_creditos", { p_user: rec.user_id, p_creditos: Math.round(rec.monto_cents / 100) });
+        await registrarEvento(admin, "info", "recarga_aprobada", rec.user_id, { reference: ref, monto: Math.round(rec.monto_cents / 100) });
+      } else {
+        // Sin fila pendiente: o es un evento repetido (normal) o la referencia no existe (raro).
+        const { data: existe } = await admin.from("recargas").select("estado").eq("reference", ref).maybeSingle();
+        if (!existe) await registrarEvento(admin, "error", "pago_aprobado_sin_recarga", null, { reference: ref, wompi_txn: txnId });
+      }
     } else if (fallido) {
-      await admin.from("recargas").update({ estado: "rechazada", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
-        .eq("reference", ref).eq("estado", "pendiente");
+      const { data: rech } = await admin.from("recargas").update({ estado: "rechazada", wompi_txn_id: txnId, updated_at: new Date().toISOString() })
+        .eq("reference", ref).eq("estado", "pendiente").select("user_id").maybeSingle();
+      if (rech) await registrarEvento(admin, "info", "recarga_rechazada", rech.user_id, { reference: ref, estado });
     }
 
     return json({ ok: true });
   } catch (e) {
     console.error(e);
+    await registrarEvento(admin, "error", "webhook_error_interno", null, { motivo: String((e as Error)?.message ?? e).slice(0, 200) });
     return json({ error: "error_interno" }, 500);
   }
 });

@@ -16,6 +16,7 @@
 //  Desplegar:  supabase functions deploy recarga-firma
 // ================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { registrarEvento } from "../_shared/eventos.ts";
 
 const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
 function corsPara(req: Request) {
@@ -69,7 +70,11 @@ Deno.serve(async (req) => {
     const { error: insErr } = await admin.from("recargas").insert({
       user_id: userId, reference, monto_cents: amountInCents, estado: "pendiente",
     });
-    if (insErr) { console.error("recargas insert:", insErr.message); return json({ error: "error_interno" }, 500); }
+    if (insErr) {
+      console.error("recargas insert:", insErr.message);
+      await registrarEvento(admin, "error", "recarga_no_creada", userId, { motivo: insErr.message });
+      return json({ error: "error_interno" }, 500);
+    }
 
     const signature = await sha256hex(`${reference}${amountInCents}COP${secret}`);
     return json({ reference, amountInCents, publicKey, signature });

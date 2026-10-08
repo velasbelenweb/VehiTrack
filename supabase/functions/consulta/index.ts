@@ -36,6 +36,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { armarInforme as armarInformeInfoSiniestral } from "../_shared/infosiniestral.ts";
 import { armarInformePlacApi } from "../_shared/placapi.ts";
 import { construirEmailInforme } from "../_shared/email-informe.ts";
+import { registrarEvento } from "../_shared/eventos.ts";
 
 const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
 function corsPara(req: Request) {
@@ -51,10 +52,10 @@ function corsPara(req: Request) {
 
 const COSTO = 20000; // pesos, directo del wallet — un solo informe combinado
 
-async function enviarCorreo(destino: string, placa: string, informe: any) {
+async function enviarCorreo(destino: string, placa: string, informe: any): Promise<string | null> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   const from = Deno.env.get("RESEND_FROM") || "VehiTrack <informes@vehitrack.app>";
-  if (!apiKey) { console.error("RESEND_API_KEY no configurado: no se envía copia por correo."); return; }
+  if (!apiKey) { console.error("RESEND_API_KEY no configurado: no se envía copia por correo."); return "resend_sin_configurar"; }
   try {
     const html = construirEmailInforme(informe, placa);
     const r = await fetch("https://api.resend.com/emails", {
@@ -62,9 +63,11 @@ async function enviarCorreo(destino: string, placa: string, informe: any) {
       headers: { Authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body: JSON.stringify({ from, to: [destino], subject: `Tu informe VehiTrack — placa ${placa}`, html }),
     });
-    if (!r.ok) console.error("Resend respondió", r.status, await r.text());
+    if (!r.ok) { console.error("Resend respondió", r.status, await r.text()); return `resend_${r.status}`; }
+    return null;
   } catch (e) {
     console.error("Error enviando correo:", e);
+    return "resend_excepcion";
   }
 }
 
@@ -104,7 +107,10 @@ Deno.serve(async (req) => {
     const hace1min = new Date(Date.now() - 60_000).toISOString();
     const { count: recientes } = await admin.from("consultas").select("id", { count: "exact", head: true })
       .eq("user_id", userId).gte("created_at", hace1min);
-    if ((recientes ?? 0) >= 5) return json({ error: "demasiadas_consultas" }, 429);
+    if ((recientes ?? 0) >= 5) {
+      await registrarEvento(admin, "warn", "limite_consultas", userId, { en_el_ultimo_minuto: recientes });
+      return json({ error: "demasiadas_consultas" }, 429);
+    }
 
     // Cobro atómico contra el saldo del wallet (en pesos)
     const { data: restante, error: rpcErr } = await admin.rpc("consumir_credito", {
@@ -139,21 +145,31 @@ Deno.serve(async (req) => {
     if (!infosiniestral && !placapi) {
       await admin.rpc("reintegrar_credito", { p_user: userId, p_costo: COSTO });
       console.error("Proveedores caídos:", infosiniestralError, placapiError);
+      await registrarEvento(admin, "error", "proveedores_caidos_reintegrado", userId, { placa, infosiniestral: infosiniestralError, placapi: placapiError, reintegrado: COSTO });
       return json({ error: "proveedor_no_disponible" }, 502);
     }
 
+    if (infosiniestralError || placapiError) {
+      await registrarEvento(admin, "warn", "informe_incompleto", userId, { placa, infosiniestral: infosiniestralError, placapi: placapiError });
+    }
     const informe = { placa, infosiniestral, infosiniestralError, placapi, placapiError };
 
     const { error: insErr } = await admin.from("consultas").insert({
       user_id: userId, placa, doc_type: docType, doc_number: docNumber,
       payload: informe, source: "infosiniestral+placapi", costo: COSTO,
     });
-    if (insErr) console.error("ALERTA: no se pudo guardar la consulta en el historial:", insErr.message);
+    if (insErr) {
+      console.error("ALERTA: no se pudo guardar la consulta en el historial:", insErr.message);
+      await registrarEvento(admin, "error", "historial_no_guardado", userId, { placa, motivo: insErr.message });
+    }
 
     // Copia por correo — se espera a que termine (para no perderla si la
     // función se apaga apenas responde), pero si falla no revierte el cobro:
     // la consulta ya se prestó y quedó guardada en el historial de la cuenta.
-    if (userEmail) await enviarCorreo(userEmail, placa, informe);
+    if (userEmail) {
+      const errCorreo = await enviarCorreo(userEmail, placa, informe);
+      if (errCorreo) await registrarEvento(admin, "warn", "correo_no_enviado", userId, { placa, motivo: errCorreo });
+    }
 
     return json({ informe, saldo: restante });
   } catch (e) {

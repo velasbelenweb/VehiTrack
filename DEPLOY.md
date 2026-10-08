@@ -167,3 +167,28 @@ Pasos manuales:
    `supabase secrets set ALLOWED_ORIGINS="https://vehitrack.app,https://www.vehitrack.app,https://TU-APP.onrender.com"`
 4. Redespliega las 3 funciones (`consulta`, `recarga-firma`,
    `wompi-webhook --no-verify-jwt`).
+
+---
+
+## Panel de superadmin (`/admin.html`)
+
+Permite revisar usuarios, consultas, pagos y detectar problemas (recargas atascadas, proveedores caídos, informes incompletos, saldos negativos, webhooks con firma inválida).
+
+**Pasos (una sola vez):**
+1. En Supabase → SQL Editor, pega y ejecuta el contenido de `verifica-admin.sql` (crea las tablas `admins` y `eventos`).
+2. Los superadministradores (`renzogallo@hotmail.com` y `autofirm_baq@hotmail.com`) ya quedan en `verifica-admin.sql`. Ambos deben haberse registrado antes en el sitio con ese correo; si alguno no existe todavía, vuelve a correr el `insert` de ese archivo después de que se registre. Para comprobar:
+   ```sql
+   select u.email from public.admins a join auth.users u on u.id = a.user_id;
+   ```
+3. Despliega la función nueva y vuelve a desplegar las tres existentes (ahora registran eventos):
+   ```
+   supabase functions deploy admin --no-verify-jwt
+   supabase functions deploy consulta --no-verify-jwt
+   supabase functions deploy recarga-firma --no-verify-jwt
+   supabase functions deploy wompi-webhook --no-verify-jwt
+   ```
+4. Sube `admin.html` a GitHub junto con el resto. Entra a `https://vehitrack.app/admin.html` con tu correo y contraseña.
+
+**Seguridad:** el acceso lo decide el servidor (tabla `admins`), no el hecho de que la URL sea secreta. Quien no esté en `admins` recibe "Acceso denegado". Las acciones "Acreditar" y "Aprobar recarga" quedan registradas en `eventos`. Antes de aprobar una recarga a mano, confirma en el panel de Wompi que el pago está APROBADO.
+
+**Limpieza opcional:** `verifica-admin.sql` trae (comentado) un borrado de eventos de más de 90 días.
