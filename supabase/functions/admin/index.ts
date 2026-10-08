@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "metodo_no_permitido" }, 405);
 
+  let autorizado = false;
   try {
     // 1) Autenticación
     const anon = createClient(
@@ -56,8 +57,10 @@ Deno.serve(async (req) => {
 
     // 2) Autorización: debe estar en la tabla admins
     const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: esAdmin } = await db.from("admins").select("user_id").eq("user_id", adminId).maybeSingle();
+    const { data: esAdmin, error: admErr } = await db.from("admins").select("user_id").eq("user_id", adminId).maybeSingle();
+    if (admErr) { console.error("admins:", admErr.message); return json({ error: "error_interno", detalle: "tabla admins: " + admErr.message }, 500); }
     if (!esAdmin) return json({ error: "prohibido" }, 403);
+    autorizado = true;
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action ?? "");
@@ -270,6 +273,8 @@ Deno.serve(async (req) => {
     return json({ error: "accion_desconocida" }, 400);
   } catch (e) {
     console.error(e);
-    return json({ error: "error_interno" }, 500);
+    // Solo un admin ya verificado ve el motivo técnico (ayuda a diagnosticar el panel).
+    const detalle = autorizado ? String((e as any)?.message ?? e).slice(0, 300) : undefined;
+    return json({ error: "error_interno", detalle }, 500);
   }
 });

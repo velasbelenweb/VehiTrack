@@ -192,3 +192,6 @@ Permite revisar usuarios, consultas, pagos y detectar problemas (recargas atasca
 **Seguridad:** el acceso lo decide el servidor (tabla `admins`), no el hecho de que la URL sea secreta. Quien no esté en `admins` recibe "Acceso denegado". Las acciones "Acreditar" y "Aprobar recarga" quedan registradas en `eventos`. Antes de aprobar una recarga a mano, confirma en el panel de Wompi que el pago está APROBADO.
 
 **Limpieza opcional:** `verifica-admin.sql` trae (comentado) un borrado de eventos de más de 90 días.
+
+### Cerrar las funciones de saldo al público (importante)
+Ejecuta una vez `verifica-seguridad-rpc.sql` en el SQL Editor. Quita el permiso de `anon` y `authenticated` sobre `consumir_credito`, `reintegrar_credito`, `sumar_creditos` y `crear_wallet`; las Edge Functions siguen funcionando porque usan `service_role`.
