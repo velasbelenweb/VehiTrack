@@ -154,12 +154,15 @@ const vacio = m => `<div class="vacio">${esc(m)}</div>`;
 /* ---------- API ---------- */
 class Denegado extends Error {}
 async function api(action, params = {}){
-  const { data, error } = await sb.functions.invoke('admin', { body: { action, ...params } });
+  const llamada = sb.functions.invoke('admin', { body: { action, ...params } });
+  const limite = new Promise((_, rej) => setTimeout(() => rej(new Error('La función "admin" no respondió en 25 s. ¿Está desplegada?')), 25000));
+  const { data, error } = await Promise.race([llamada, limite]);
   if (error) {
     let pl = null; try { pl = await error.context.json(); } catch (_) {}
     if (pl?.error === 'prohibido') throw new Denegado();
     if (pl?.error === 'no_autenticado') throw new Denegado('sesion');
-    throw new Error(pl?.error || error.message);
+    if (pl?.error) throw new Error(pl.error + (pl.detalle ? ' — ' + pl.detalle : ''));
+    throw new Error('No se pudo contactar la función "admin" (' + (error.message || 'sin respuesta') + '). Revisa que esté desplegada con: supabase functions deploy admin --no-verify-jwt');
   }
   return data;
 }
@@ -171,8 +174,9 @@ async function iniciar(){
   const { data:{ session } } = await sb.auth.getSession();
   if (!session) return ver('vLogin');
   $('#quien').textContent = session.user.email;
-  try { await cargarTab('resumen'); ver('vPanel'); cargarContadorProblemas(); }
-  catch (e) { if (e instanceof Denegado) { e.message === 'sesion' ? ver('vLogin') : ver('vDenegado'); } else { ver('vPanel'); $('#p-resumen').innerHTML = vacio('Error al cargar: ' + e.message); } }
+  ver('vPanel');
+  await cargarTab('resumen');
+  cargarContadorProblemas();
 }
 $('#btnEntrar').onclick = async () => {
   const err = $('#lgErr'); err.hidden = true;
@@ -198,7 +202,13 @@ function irTab(t){
 async function cargarTab(t){
   const cont = $('#p-'+t); cont.innerHTML = vacio('Cargando…');
   const fn = { resumen:vResumen, problemas:vProblemas, usuarios:vUsuarios, consultas:vConsultas, pagos:vPagos, eventos:vEventos }[t];
-  await fn(cont);
+  try { await fn(cont); }
+  catch (e) {
+    if (e instanceof Denegado) return ver(e.message === 'sesion' ? 'vLogin' : 'vDenegado');
+    cont.innerHTML = `<div class="card"><h2>No se pudo cargar esta sección</h2><p class="err" id="errTxt"></p><button class="btn" id="btnReintentar" style="margin-top:10px">Reintentar</button></div>`;
+    $('#errTxt').textContent = e.message || String(e);
+    $('#btnReintentar').onclick = () => cargarTab(t);
+  }
 }
 async function cargarContadorProblemas(){
   try { const { problemas } = await api('problemas'); const c = $('#cntProb'); c.textContent = problemas.length; c.className = 'cnt' + (problemas.length ? '' : ' ok'); } catch (_) {}
@@ -344,7 +354,7 @@ document.addEventListener('click', async e => {
       toast('Recarga aprobada. Saldo del usuario: ' + money(r.saldo)); cargarTab(tabActual); cargarContadorProblemas();
     }
   } catch (x) {
-    if (x instanceof Denegado) return iniciar();
+    if (x instanceof Denegado) return ver(x.message === 'sesion' ? 'vLogin' : 'vDenegado');
     toast('Error: ' + (x.message === 'recarga_no_pendiente' ? 'esa recarga ya no está pendiente' : x.message));
   }
 });
