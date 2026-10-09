@@ -219,8 +219,10 @@ function barras(serie, campo, clase, fmt){
   const max = Math.max(1, ...serie.map(s => s[campo]));
   return `<div class="bars">${serie.map(s => `<div class="bar ${clase}" title="${esc(s.dia)}: ${esc(fmt(s[campo]))}"><b>${s[campo] ? esc(fmt(s[campo])) : ''}</b><i style="height:${Math.round(s[campo] / max * 100)}%"></i><span>${esc(s.dia.slice(8))}</span></div>`).join('')}</div>`;
 }
+let PUEDE_ABONAR = false;   // lo decide el servidor; aquí solo se oculta el botón
 async function vResumen(c){
   const r = await api('resumen');
+  PUEDE_ABONAR = r.puede_abonar === true;
   const k = (n, l, mal) => `<div class="kpi ${mal ? 'mal' : ''}"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`;
   c.innerHTML = `
   <div class="kpis">
@@ -263,7 +265,7 @@ async function vUsuarios(c){
     <td>${esc(u.email)}</td><td>${esc(fecha(u.created_at))}</td><td>${esc(fecha(u.last_sign_in_at))}</td>
     <td>${u.confirmado ? '<span class="b ok">Sí</span>' : '<span class="b med">No</span>'}</td>
     <td><b>${esc(money(u.saldo))}</b></td><td>${esc(money(u.recargado))}</td><td>${esc(u.consultas)}</td><td>${esc(fecha(u.ultima_consulta))}</td>
-    <td><button class="btn sm" data-act="ver-consultas" data-id="${esc(u.id)}">Consultas</button> <button class="btn sm" data-act="acreditar" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Acreditar</button></td></tr>`).join('')}</tbody></table></div>`;
+    <td><button class="btn sm" data-act="ver-consultas" data-id="${esc(u.id)}">Consultas</button> ${PUEDE_ABONAR ? `<button class="btn sm" data-act="acreditar" data-id="${esc(u.id)}" data-mail="${esc(u.email)}">Acreditar</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
   $('#buscaU').oninput = e => { const q = e.target.value.toLowerCase(); document.querySelectorAll('#tbU tr').forEach(tr => tr.hidden = !tr.dataset.mail.includes(q)); };
 }
 
@@ -355,7 +357,7 @@ document.addEventListener('click', async e => {
     }
   } catch (x) {
     if (x instanceof Denegado) return ver(x.message === 'sesion' ? 'vLogin' : 'vDenegado');
-    toast('Error: ' + (x.message === 'recarga_no_pendiente' ? 'esa recarga ya no está pendiente' : x.message));
+    toast('Error: ' + (x.message === 'recarga_no_pendiente' ? 'esa recarga ya no está pendiente' : x.message.startsWith('sin_permiso_abonar') ? 'tu cuenta no tiene permiso para abonar saldo' : x.message));
   }
 });
 
