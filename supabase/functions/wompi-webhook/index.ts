@@ -92,7 +92,13 @@ Deno.serve(async (req) => {
         .eq("reference", ref).eq("estado", "pendiente")
         .select("user_id, monto_cents").maybeSingle();
       if (rec) {
-        await admin.rpc("sumar_creditos", { p_user: rec.user_id, p_creditos: Math.round(rec.monto_cents / 100) });
+        const { error: sumErr } = await admin.rpc("sumar_creditos", { p_user: rec.user_id, p_creditos: Math.round(rec.monto_cents / 100) });
+        if (sumErr) {
+          // La recarga quedó 'aprobada' pero el saldo no se abonó: hay que acreditarlo a mano desde el panel.
+          console.error("sumar_creditos:", sumErr.message);
+          await registrarEvento(admin, "error", "abono_fallido", rec.user_id, { reference: ref, monto: Math.round(rec.monto_cents / 100), motivo: sumErr.message });
+          return json({ error: "abono_fallido" }, 500);
+        }
         await registrarEvento(admin, "info", "recarga_aprobada", rec.user_id, { reference: ref, monto: Math.round(rec.monto_cents / 100) });
       } else {
         // Sin fila pendiente: o es un evento repetido (normal) o la referencia no existe (raro).

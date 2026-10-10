@@ -195,3 +195,13 @@ Permite revisar usuarios, consultas, pagos y detectar problemas (recargas atasca
 
 ### Cerrar las funciones de saldo al público (importante)
 Ejecuta una vez `verifica-seguridad-rpc.sql` en el SQL Editor. Quita el permiso de `anon` y `authenticated` sobre `consumir_credito`, `reintegrar_credito`, `sumar_creditos` y `crear_wallet`; las Edge Functions siguen funcionando porque usan `service_role`.
+
+### Botón "Mis consultas"
+No requiere cambios en las funciones. La política `consultas propias` (solo lectura de las filas del propio usuario) ya existe en tu base; `verifica-mis-consultas.sql` solo agrega un índice. El botón aparece en el encabezado al iniciar sesión.
+
+### Permiso para abonar saldo
+Cada admin tiene `puede_abonar` en la tabla `admins` (por defecto **falso**). Sin él puede ver todo el panel y aprobar recargas pendientes, pero el botón "Acreditar" queda oculto y el servidor rechaza esa acción. Para darlo o quitarlo:
+```sql
+update public.admins a set puede_abonar = true  -- o false
+  from auth.users u where u.id = a.user_id and lower(u.email) = 'correo@ejemplo.com';
+```

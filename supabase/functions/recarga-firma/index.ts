@@ -31,7 +31,7 @@ function corsPara(req: Request) {
 
 
 // Montos de recarga permitidos (pesos). Ajusta libremente la lista.
-const MONTOS_VALIDOS = [5000, 10000, 20000, 50000, 100000];
+const MONTOS_VALIDOS = [20000, 50000, 100000];
 
 async function sha256hex(str: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));

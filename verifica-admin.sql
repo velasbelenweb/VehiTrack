@@ -40,8 +40,16 @@ insert into public.admins (user_id)
   where lower(email) in ('renzogallo@hotmail.com', 'autofirm_baq@hotmail.com')
   on conflict do nothing;
 
+-- Permiso para abonar saldo / aprobar recargas a mano (por defecto NO).
+-- Un admin sin este permiso puede ver todo, pero no mover dinero.
+alter table public.admins add column if not exists puede_abonar boolean not null default false;
+update public.admins a set puede_abonar = true
+  from auth.users u where u.id = a.user_id and lower(u.email) = 'renzogallo@hotmail.com';
+update public.admins a set puede_abonar = false
+  from auth.users u where u.id = a.user_id and lower(u.email) = 'autofirm_baq@hotmail.com';
+
 -- Verificar (deben salir 2 filas):
--- select u.email from public.admins a join auth.users u on u.id = a.user_id;
+-- select u.email, a.puede_abonar from public.admins a join auth.users u on u.id = a.user_id;
 
 -- Opcional: borrar eventos de más de 90 días
 -- delete from public.eventos where created_at < now() - interval '90 days';
