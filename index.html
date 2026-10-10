@@ -760,13 +760,63 @@ function renderInforme(raw){
   </div>`;
 }
 
-function compartirWhatsApp(){
+/* Genera el PDF real del informe (librería cargada solo al usarla). */
+let h2pPromise = null;
+function cargarHtml2Pdf(){
+  if(window.html2pdf) return Promise.resolve();
+  if(h2pPromise) return h2pPromise;
+  h2pPromise = new Promise((ok, fail)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+    s.onload = ok; s.onerror = ()=>{ h2pPromise = null; fail(new Error('No se pudo cargar el generador de PDF')); };
+    document.head.appendChild(s);
+  });
+  return h2pPromise;
+}
+async function generarPdfInforme(placa){
+  await cargarHtml2Pdf();
+  const el = $('#informeBody');
+  const nombre = `VehiTrack-${String(placa||'informe').replace(/[^A-Za-z0-9_-]/g,'')}.pdf`;
+  const blob = await window.html2pdf().set({
+    margin: [10, 8, 10, 8],
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollY: 0,
+      ignoreElements: n => n.classList && n.classList.contains('report-foot') },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['css', 'legacy'], avoid: ['.rcard'] },
+  }).from(el).outputPdf('blob');
+  return new File([blob], nombre, { type: 'application/pdf' });
+}
+async function compartirWhatsApp(){
   const r = ultimoInforme; if(!r) return;
   const riesgo = calcularRiesgo(r);
   const v = r.placapi?.vehicle?.data || r.infosiniestral?.vehiculo || {};
   const lvlTxt = {verde:'Riesgo bajo',amarillo:'Riesgo medio',rojo:'Riesgo alto'}[riesgo.nivel];
   const texto = `Informe VehiTrack — Placa ${r.placa}\n${[v.marca,v.linea||v.tipo,v.modelo].filter(Boolean).join(' ')}\nSemáforo: ${lvlTxt}\n\nGenera tu propio informe en https://vehitrack.app`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  // ¿Este dispositivo puede compartir archivos directo a WhatsApp? (celulares sí; la mayoría de computadores no)
+  let puedeArchivo = false;
+  try { puedeArchivo = !!(navigator.canShare && navigator.canShare({ files:[new File(['x'],'a.pdf',{type:'application/pdf'})] })); } catch(_) {}
+  // En computador abrimos WhatsApp ya (antes de esperar) para que el navegador no bloquee la ventana.
+  const win = puedeArchivo ? null : window.open('', '_blank');
+  toast('Preparando el PDF…');
+  try {
+    const pdf = await generarPdfInforme(r.placa);
+    if(puedeArchivo){
+      try { await navigator.share({ files:[pdf], text: texto, title: pdf.name }); }
+      catch(e){ if(e && e.name !== 'AbortError') throw e; }
+      return;
+    }
+    const url = URL.createObjectURL(pdf);
+    const a = document.createElement('a'); a.href = url; a.download = pdf.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+    if(win) win.location.href = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    toast('PDF descargado: adjúntalo en la conversación de WhatsApp');
+  } catch(e){
+    if(win) win.close();
+    console.error(e);
+    toast('No se pudo generar el PDF. Intenta con "Descargar PDF".');
+  }
 }
 
 /* ================================================================
