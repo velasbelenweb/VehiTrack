@@ -35,6 +35,12 @@ export async function armarInformePlacApi(
     headers: { "x-api-key": apiKey, "content-type": "application/json" },
     body: JSON.stringify({ placa, docType, docNumber, primerApellido, ciudad }),
   });
+  if (r.status === 402) {
+    // Según su documentación, el 402 "no_credits" trae el campo `saldo` en el cuerpo.
+    const b = await r.json().catch(() => ({}));
+    const s = Number(b?.saldo);
+    throw new Error(Number.isFinite(s) ? `placapi_sin_creditos:${s}` : "placapi_sin_creditos");
+  }
   if (!r.ok) throw new Error(`PlacApi (consulta-full) respondió ${r.status}`);
   return await r.json();
 }

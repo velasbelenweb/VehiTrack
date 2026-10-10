@@ -21,6 +21,7 @@
 // ================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { registrarEvento } from "../_shared/eventos.ts";
+import { estadoProveedor, UMBRAL_CONSULTAS } from "../_shared/saldos.ts";
 
 const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
 function corsPara(req: Request) {
@@ -244,6 +245,24 @@ Deno.serve(async (req) => {
       const { data, error } = await q;
       if (error) throw error;
       return json({ eventos: (data ?? []).map((e) => ({ ...e, correo: mail(um, e.user_id) })) });
+    }
+
+    // ---------------- SALDOS DE PROVEEDORES ----------------
+    if (action === "saldos") {
+      const [infosiniestral, placapi] = await Promise.all([estadoProveedor(db, "infosiniestral"), estadoProveedor(db, "placapi")]);
+      return json({ umbral: UMBRAL_CONSULTAS, proveedores: [infosiniestral, placapi] });
+    }
+    if (action === "guardar_saldo") {
+      const proveedor = String(body?.proveedor ?? "");
+      const saldo = Number(body?.saldo), costo = Number(body?.costo_consulta);
+      if (proveedor !== "infosiniestral" && proveedor !== "placapi") return json({ error: "proveedor_invalido" }, 400);
+      if (!Number.isFinite(saldo) || saldo < 0 || saldo > 1e9) return json({ error: "saldo_invalido" }, 400);
+      if (!Number.isFinite(costo) || costo <= 0 || costo > 1e7) return json({ error: "costo_invalido" }, 400);
+      const { error } = await db.from("proveedor_saldos").upsert(
+        { proveedor, saldo, costo_consulta: costo, origen: "manual", actualizado_at: new Date().toISOString() }, { onConflict: "proveedor" });
+      if (error) throw error;
+      await registrarEvento(db, "info", "saldo_proveedor_manual", adminId, { proveedor, saldo, costo_consulta: costo });
+      return json({ ok: true });
     }
 
     // ---------------- ACCIONES (auditadas) ----------------

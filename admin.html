@@ -86,6 +86,8 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--brand)
 .acts{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
 .toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:11px 18px; border-radius:11px; font-weight:600; z-index:90; }
 @media (max-width:760px){ .charts{ grid-template-columns:1fr; } }
+/* Móvil: con menos de 16px el navegador del celular hace zoom al tocar un campo (el "salto de tamaño"). */
+@media (max-width:820px){ input, select, textarea{ font-size:16px !important; } }
 </style>
 </head>
 <body>
@@ -124,13 +126,16 @@ input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--brand)
     <button class="tab" role="tab" data-tab="usuarios" aria-selected="false">Usuarios</button>
     <button class="tab" role="tab" data-tab="consultas" aria-selected="false">Consultas</button>
     <button class="tab" role="tab" data-tab="pagos" aria-selected="false">Pagos</button>
+    <button class="tab" role="tab" data-tab="saldos" aria-selected="false">Saldos<span class="cnt ok" id="cntSaldos">…</span></button>
     <button class="tab" role="tab" data-tab="eventos" aria-selected="false">Eventos</button>
   </div>
+  <div id="bannerSaldo"></div>
   <section id="p-resumen"></section>
   <section id="p-problemas" hidden></section>
   <section id="p-usuarios" hidden></section>
   <section id="p-consultas" hidden></section>
   <section id="p-pagos" hidden></section>
+  <section id="p-saldos" hidden></section>
   <section id="p-eventos" hidden></section>
 </main>
 
@@ -176,7 +181,7 @@ async function iniciar(){
   $('#quien').textContent = session.user.email;
   ver('vPanel');
   await cargarTab('resumen');
-  cargarContadorProblemas();
+  cargarContadorProblemas(); cargarAlertaSaldos();
 }
 $('#btnEntrar').onclick = async () => {
   const err = $('#lgErr'); err.hidden = true;
@@ -187,7 +192,7 @@ $('#btnEntrar').onclick = async () => {
 $('#lgPass').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnEntrar').click(); });
 const salir = async () => { await sb.auth.signOut(); $('#quien').textContent = ''; ver('vLogin'); };
 $('#btnSalir').onclick = salir; $('#btnSalir2').onclick = salir;
-$('#btnRefrescar').onclick = () => { cargarTab(tabActual); cargarContadorProblemas(); };
+$('#btnRefrescar').onclick = () => { cargarTab(tabActual); cargarContadorProblemas(); cargarAlertaSaldos(); };
 
 /* ---------- Tabs ---------- */
 let tabActual = 'resumen';
@@ -196,12 +201,12 @@ $('#tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); 
 function irTab(t){
   tabActual = t;
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
-  ['resumen','problemas','usuarios','consultas','pagos','eventos'].forEach(x => $('#p-'+x).hidden = x !== t);
+  ['resumen','problemas','usuarios','consultas','pagos','saldos','eventos'].forEach(x => $('#p-'+x).hidden = x !== t);
   cargarTab(t);
 }
 async function cargarTab(t){
   const cont = $('#p-'+t); cont.innerHTML = vacio('Cargando…');
-  const fn = { resumen:vResumen, problemas:vProblemas, usuarios:vUsuarios, consultas:vConsultas, pagos:vPagos, eventos:vEventos }[t];
+  const fn = { resumen:vResumen, problemas:vProblemas, usuarios:vUsuarios, consultas:vConsultas, pagos:vPagos, saldos:vSaldos, eventos:vEventos }[t];
   try { await fn(cont); }
   catch (e) {
     if (e instanceof Denegado) return ver(e.message === 'sesion' ? 'vLogin' : 'vDenegado');
@@ -309,6 +314,34 @@ async function vPagos(c){
   $('#fEstado').onchange = e => { f.estado = e.target.value; cargarTab('pagos'); };
 }
 
+
+/* ---------- Saldos de proveedores ---------- */
+const NOMBRE_PROV = { infosiniestral:'InfoSiniestral', placapi:'PlacApi' };
+const num = n => Number(n).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+function pintarAlertaSaldos(d){
+  const bajos = d.proveedores.filter(p => p.configurado && p.bajo);
+  const c = $('#cntSaldos'); c.textContent = bajos.length || '✓'; c.className = 'cnt' + (bajos.length ? '' : ' ok');
+  $('#bannerSaldo').innerHTML = bajos.map(p => `<div class="prob alta"><div><h3><span class="b mal">saldo bajo</span> ${esc(NOMBRE_PROV[p.proveedor])}: quedan ~${esc(p.restantes)} consultas</h3><p>Recarga pronto: el umbral de alerta es de ${esc(d.umbral)} consultas.</p></div><div><button class="btn sm" data-act="ir-saldos">Ver saldos</button></div></div>`).join('');
+}
+async function cargarAlertaSaldos(){ try { pintarAlertaSaldos(await api('saldos')); } catch (_) {} }
+async function vSaldos(c){
+  const d = await api('saldos');
+  pintarAlertaSaldos(d);
+  const nota = {
+    infosiniestral: 'Se actualiza solo con cada consulta (lo informa InfoSiniestral en su respuesta). Si no se ha hecho ninguna consulta aún, anota el saldo a mano.',
+    placapi: 'PlacApi no informa su saldo, solo cuando se acaba. Anota aquí los créditos que ves en tu cuenta de PlacApi; desde ese momento se descuentan las consultas hechas por VehiTrack (estimado).',
+  };
+  c.innerHTML = `<div class="kpis">${d.proveedores.map(p => {
+    if (!p.configurado) return `<div class="card"><h2>${esc(NOMBRE_PROV[p.proveedor])}</h2><p style="color:var(--muted)">Sin saldo registrado todavía.</p><p style="color:var(--muted);font-size:13px">${esc(nota[p.proveedor])}</p><button class="btn sm pri" data-act="editar-saldo" data-prov="${esc(p.proveedor)}" data-saldo="" data-costo="${p.proveedor === 'placapi' ? 3 : ''}">Anotar saldo</button></div>`;
+    return `<div class="card"><h2>${esc(NOMBRE_PROV[p.proveedor])} ${p.bajo ? '<span class="b mal">saldo bajo</span>' : '<span class="b ok">ok</span>'}</h2>
+      <div class="kpi ${p.bajo ? 'mal' : ''}"><div class="n">~${esc(p.restantes)}</div><div class="l">consultas restantes (alerta si baja de ${esc(d.umbral)})</div></div>
+      <p style="margin-top:10px">Saldo estimado: <b>${esc(num(p.saldo_estimado))}</b> · Costo por consulta: <b>${esc(num(p.costo_consulta))}</b></p>
+      <p style="color:var(--muted);font-size:13px">Dato base: ${esc(num(p.saldo_base))} (${p.origen === 'api' ? 'leído del proveedor' : 'anotado a mano'}, ${esc(fecha(p.actualizado_at))})${p.consultas_desde ? ` − ${esc(p.consultas_desde)} consultas desde entonces` : ''}</p>
+      <p style="color:var(--muted);font-size:13px">${esc(nota[p.proveedor])}</p>
+      <button class="btn sm" data-act="editar-saldo" data-prov="${esc(p.proveedor)}" data-saldo="${esc(p.saldo_estimado)}" data-costo="${esc(p.costo_consulta)}">Actualizar saldo</button></div>`;
+  }).join('')}</div>`;
+}
+
 /* ---------- Eventos ---------- */
 async function vEventos(c){
   const f = filtros.eventos;
@@ -348,6 +381,22 @@ document.addEventListener('click', async e => {
         $('#aOk').disabled = true;
         try { const r = await api('acreditar', { user_id: id, monto, motivo }); cerrar(); toast('Listo. Saldo nuevo: ' + money(r.saldo)); cargarTab(tabActual); }
         catch (x) { er.textContent = 'No se pudo: ' + x.message; er.hidden = false; $('#aOk').disabled = false; }
+      };
+    }
+    else if (act === 'ir-saldos') { irTab('saldos'); }
+    else if (act === 'editar-saldo') {
+      const prov = b.dataset.prov;
+      abrir(`<h3>Saldo de ${esc(NOMBRE_PROV[prov])}</h3><p style="color:var(--muted)">Escribe lo que te muestra la cuenta del proveedor ahora mismo.</p>
+        <label for="sSaldo">Saldo actual (en las unidades del proveedor: créditos o pesos)</label><input id="sSaldo" type="number" min="0" step="any" value="${esc(b.dataset.saldo)}" />
+        <label for="sCosto">Costo de cada consulta (en esas mismas unidades)</label><input id="sCosto" type="number" min="0" step="any" value="${esc(b.dataset.costo)}" />
+        <div class="err" id="sErr" hidden></div>
+        <div class="acts"><button class="btn" data-act="cerrar">Cancelar</button><button class="btn pri" id="sOk">Guardar</button></div>`);
+      $('#sOk').onclick = async () => {
+        const saldo = Number($('#sSaldo').value), costo = Number($('#sCosto').value), er = $('#sErr');
+        if ($('#sSaldo').value === '' || !(saldo >= 0) || !(costo > 0)) { er.textContent = 'Escribe un saldo (0 o más) y un costo mayor que 0.'; er.hidden = false; return; }
+        $('#sOk').disabled = true;
+        try { await api('guardar_saldo', { proveedor: prov, saldo, costo_consulta: costo }); cerrar(); toast('Saldo guardado'); cargarTab('saldos'); }
+        catch (x) { er.textContent = 'No se pudo: ' + x.message; er.hidden = false; $('#sOk').disabled = false; }
       };
     }
     else if (act === 'aprobar') {

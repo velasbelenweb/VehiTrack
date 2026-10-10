@@ -37,6 +37,7 @@ import { armarInforme as armarInformeInfoSiniestral } from "../_shared/infosinie
 import { armarInformePlacApi } from "../_shared/placapi.ts";
 import { construirEmailInforme } from "../_shared/email-informe.ts";
 import { registrarEvento } from "../_shared/eventos.ts";
+import { guardarSaldo, avisarSiBajo } from "../_shared/saldos.ts";
 
 const ORIGENES = (Deno.env.get("ALLOWED_ORIGINS") ?? "https://vehitrack.app,https://www.vehitrack.app").split(",").map((s) => s.trim());
 function corsPara(req: Request) {
@@ -139,6 +140,26 @@ Deno.serve(async (req) => {
       placapi = resPlac.value;
     } else {
       placapiError = String((resPlac.reason as Error)?.message ?? resPlac.reason);
+    }
+
+    // Saldos de los proveedores (alimentan la pestaña "Saldos" del superadmin)
+    if (infosiniestral && !infosiniestral.sinResultados && Number.isFinite(Number(infosiniestral.balance))) {
+      await guardarSaldo(admin, "infosiniestral", {
+        saldo: Number(infosiniestral.balance), costo_consulta: Number(infosiniestral.price_charged), origen: "api",
+      });
+    }
+    // El saldo/costo de VehiTrack con el proveedor es información interna: no viaja al cliente ni al historial.
+    if (infosiniestral && typeof infosiniestral === "object") {
+      for (const k of ["balance", "price_charged", "month_count", "month_key"]) delete infosiniestral[k];
+    }
+    if (infosiniestralError === "infosiniestral_sin_saldo") await registrarEvento(admin, "error", "proveedor_sin_saldo", userId, { proveedor: "infosiniestral" });
+    if (placapiError?.startsWith("placapi_sin_creditos")) {
+      const s = Number(placapiError.split(":")[1]);
+      if (Number.isFinite(s)) await guardarSaldo(admin, "placapi", { saldo: s, origen: "api" });
+      await registrarEvento(admin, "error", "proveedor_sin_saldo", userId, { proveedor: "placapi", saldo: Number.isFinite(s) ? s : null });
+      placapiError = "placapi_sin_creditos"; // sin el número, para que no llegue al cliente
+    } else if (placapi) {
+      await avisarSiBajo(admin, "placapi"); // el saldo de PlacApi es estimado: se revisa tras cada consulta
     }
 
     // Si LAS DOS fallaron de verdad (sin ni siquiera "sin resultados"), se reintegra.

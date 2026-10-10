@@ -205,3 +205,12 @@ Cada admin tiene `puede_abonar` en la tabla `admins` (por defecto **falso**). Si
 update public.admins a set puede_abonar = true  -- o false
   from auth.users u where u.id = a.user_id and lower(u.email) = 'correo@ejemplo.com';
 ```
+
+## Pestaña "Saldos" del superadmin (alerta con menos de 15 consultas)
+- InfoSiniestral: el saldo se actualiza solo con cada consulta (lo informa en su respuesta).
+- PlacApi no informa su saldo. Entra a Saldos → "Anotar saldo" y escribe los créditos que ves en tu cuenta de PlacApi (cada consulta cuesta 3). Desde ese momento se descuentan las consultas hechas por VehiTrack; vuelve a anotar el saldo después de cada recarga que hagas con ellos.
+- Si quedan menos de 15 consultas aparece un aviso rojo arriba del panel y un evento en "Problemas".
+- Requiere `verifica-saldos.sql` y desplegar `admin` y `consulta`.
+
+## PDF sin datos personales
+El PDF que se descarga o se envía por WhatsApp no incluye el nombre del titular ni datos de licencia (Ley 1581 de 2012). En pantalla, quien hizo la consulta sí los ve.
