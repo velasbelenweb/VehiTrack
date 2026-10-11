@@ -28,7 +28,7 @@
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
 [hidden]{ display:none !important; }
 html{ scroll-behavior:smooth; overflow-x:hidden; }
-body{ font-family:'Inter',system-ui,sans-serif; background:var(--paper); color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; overflow-wrap:anywhere; }
+body{ font-family:'Inter',system-ui,sans-serif; background:var(--paper); color:var(--text); line-height:1.55; -webkit-font-smoothing:antialiased; overflow-x:hidden; overflow-wrap:break-word; }
 button{ font:inherit; cursor:pointer; border:none; background:none; color:inherit; }
 input,select{ font:inherit; color:inherit; width:100%; }
 a{ color:inherit; text-decoration:none; }
@@ -186,6 +186,14 @@ a{ color:inherit; text-decoration:none; }
   #acctChip .who{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){ *{ animation:none!important; transition:none!important; } }
+/* Móvil: botones del informe y etiquetas sin cortar palabras a la mitad. */
+.btn-o, .rc-head .badge, .tag{ white-space:nowrap; }
+@media (max-width:640px){
+  .report-foot{ flex-direction:column; align-items:stretch; }
+  .rf-actions{ margin-left:0; flex-direction:column; width:100%; }
+  .rf-actions .btn-o{ width:100%; justify-content:center; }
+  .rc-head h3{ min-width:0; }
+}
 /* Móvil: con menos de 16px el navegador del celular hace zoom al tocar un campo (el "salto de tamaño"). */
 @media (max-width:820px){ input, select, textarea{ font-size:16px !important; } }
 @media print{
@@ -514,14 +522,14 @@ function calcularRiesgo(r){
     if((a.prendas||[]).length) push('amarillo', `Prenda vigente ante ${a.prendas[0].acreedor.split(' ').slice(0,3).join(' ')}…`);
     if(imp && imp.totalPendiente>0) push('amarillo', `Impuesto pendiente: ${money(imp.totalPendiente)}`);
     if(s && (s.totalDeuda||0)>0) push('amarillo', `Multas SIMIT: ${money(s.totalDeuda)}`);
-    if(soatPla.vigente===false) push('rojo', 'SOAT vencido (PlacApi)');
+    if(soatPla.vigente===false) push('rojo', 'SOAT vencido');
     else if(soatPla.diasParaVencer!=null && soatPla.diasParaVencer<=30) push('amarillo', `SOAT vence en ${soatPla.diasParaVencer} días`);
     if(rtm.vigente===false) push('rojo', 'Tecnomecánica vencida');
     else if(rtm.diasParaVencer!=null && rtm.diasParaVencer<=30) push('amarillo', `Tecnomecánica vence en ${rtm.diasParaVencer} días`);
 
     if(!(a.embargos||[]).length && !(a.prendas||[]).length) push('verde', 'Sin gravámenes ni embargos');
     if(s && s.pazSalvo) push('verde', 'Paz y salvo de multas (SIMIT)');
-    if(soatPla.vigente && soatPla.diasParaVencer>30) push('verde', 'SOAT vigente (PlacApi)');
+    if(soatPla.vigente && soatPla.diasParaVencer>30) push('verde', 'SOAT vigente');
     if(rtm.vigente && rtm.diasParaVencer>30) push('verde', 'Tecnomecánica vigente');
   }
 
@@ -632,9 +640,9 @@ function renderInforme(raw){
     <div class="rcard wide">
       <div class="rc-head">${icoBox('<path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>')}<h3>Señales detectadas</h3></div>
       ${flagsHTML}
-      ${sinInfoSiniestral? `<div class="note" style="margin-top:8px">InfoSiniestral no encontró registros para esta placa (aseguradoras/SOAT/siniestros/avalúo); el resto del informe viene de PlacApi.</div>`:''}
-      ${r.infosiniestralError? `<div class="note" style="margin-top:8px">Aseguradoras/SOAT/siniestros/avalúo no disponibles en esta consulta (InfoSiniestral no respondió).</div>`:''}
-      ${r.placapiError? `<div class="note" style="margin-top:8px">RUNT/SOAT/tecnomecánica/SIMIT/impuestos/Fasecolda no disponibles en esta consulta (PlacApi no respondió).</div>`:''}
+      ${sinInfoSiniestral? `<div class="note" style="margin-top:8px">No se encontraron registros de aseguradoras, SOAT, siniestros ni avalúo para esta placa; el resto del informe sí se pudo consultar.</div>`:''}
+      ${r.infosiniestralError? `<div class="note" style="margin-top:8px">Aseguradoras, SOAT, siniestros y avalúo no estuvieron disponibles en esta consulta.</div>`:''}
+      ${r.placapiError? `<div class="note" style="margin-top:8px">RUNT, SOAT, tecnomecánica, SIMIT, impuestos y Fasecolda no estuvieron disponibles en esta consulta.</div>`:''}
     </div>
 
     ${v.marca||v.placa ? `
@@ -714,7 +722,7 @@ function renderInforme(raw){
 
     <!-- Avalúo -->
     <div class="rcard wide">
-      <div class="rc-head">${icoBox('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>')}<h3>Avalúo comercial${gv?' (InfoSiniestral)':fc?' (Fasecolda)':''}</h3></div>
+      <div class="rc-head">${icoBox('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>')}<h3>Avalúo comercial${!gv&&fc?' (Fasecolda)':''}</h3></div>
       ${gv? `
         ${row('Valor guía', `<span class="rv big">${escHtml(gv.valor_guia)}</span>`)}
         ${row('Código', gv.codigo)}
@@ -745,7 +753,7 @@ function renderInforme(raw){
   </div>
 
   <div class="report-foot">
-    <span class="folio">Folio <b>${folio}</b> · Generado ${new Date().toLocaleString('es-CO')} · Fuentes: InfoSiniestral + PlacApi</span>
+    <span class="folio">Folio <b>${folio}</b> · Generado ${new Date().toLocaleString('es-CO')} · Fuentes: RUNT, SIMIT, Fasecolda y aseguradoras</span>
     <div class="rf-actions">
       <button class="btn-o" onclick="descargarPdf()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>

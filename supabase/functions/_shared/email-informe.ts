@@ -75,9 +75,9 @@ export function construirEmailInforme(informeCrudo: any, placaCruda: string): st
       secciones += tarjeta("Avalúo comercial", `<table>${fila("Valor guía", info.guia_valores.valor_guia)}${fila("Código", info.guia_valores.codigo)}</table>`);
     }
   } else if (info?.sinResultados) {
-    secciones += tarjeta("InfoSiniestral (aseguradoras/SOAT/siniestros/avalúo)", `<p style="font-size:13px;color:#5A6577">Esta placa no tiene registros en InfoSiniestral.</p>`);
+    secciones += tarjeta("Aseguradoras, SOAT, siniestros y avalúo", `<p style="font-size:13px;color:#5A6577">Esta placa no tiene registros de aseguradoras, SOAT, siniestros ni avalúo.</p>`);
   } else if (informe?.infosiniestralError) {
-    secciones += tarjeta("InfoSiniestral (aseguradoras/SOAT/siniestros/avalúo)", `<p style="font-size:13px;color:#5A6577">No disponible en esta consulta.</p>`);
+    secciones += tarjeta("Aseguradoras, SOAT, siniestros y avalúo", `<p style="font-size:13px;color:#5A6577">No disponible en esta consulta.</p>`);
   }
 
   // --- PlacApi: RUNT, situación legal, multas, tecnomecánica, impuestos, pico y placa, licencia ---
@@ -85,7 +85,7 @@ export function construirEmailInforme(informeCrudo: any, placaCruda: string): st
     const v = pla.vehicle?.data, a = pla.antecedentes?.data, s = pla.simit?.data, soat = pla.soat?.data, rtm = pla.rtm?.data, imp = pla.impuestos?.data, fc = pla.fasecolda?.data;
     if (v) secciones += tarjeta("Identificación (RUNT)", `<table>${fila("Marca", v.marca)}${fila("Línea", v.linea)}${fila("Modelo", v.modelo)}${fila("Estado", v.estado)}${fila("Color", v.color)}</table>`);
     if (a) secciones += tarjeta("Situación legal", `<table>${fila("Prendas", (a.prendas || []).length)}${fila("Embargos", (a.embargos || []).length)}${fila("Propietarios", a.historicoPropietarios)}</table>`);
-    if (soat) secciones += tarjeta("SOAT (PlacApi)", `<table>${fila("Vigente", soat.vigente ? "Sí" : "No")}${fila("Aseguradora", soat.aseguradora)}${fila("Vence", soat.fechaVencimiento)}</table>`);
+    if (soat) secciones += tarjeta("SOAT (vigencia)", `<table>${fila("Vigente", soat.vigente ? "Sí" : "No")}${fila("Aseguradora", soat.aseguradora)}${fila("Vence", soat.fechaVencimiento)}</table>`);
     if (rtm) secciones += tarjeta("Tecnomecánica", `<table>${fila("Vigente", rtm.vigente ? "Sí" : "No")}${fila("CDA", rtm.cda)}${fila("Vence", rtm.fechaVencimiento)}</table>`);
     if (s) secciones += tarjeta("Multas (SIMIT)", `<table>${fila("Deuda total", money(s.totalDeuda))}${fila("Paz y salvo", s.pazSalvo ? "Sí" : "No")}</table>`);
     if (imp) secciones += tarjeta("Impuestos", `<table>${fila("Total pendiente", money(imp.totalPendiente))}${fila("Departamento", imp.departamento)}</table>`);
