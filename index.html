@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; form-action 'self' https://checkout.wompi.co; base-uri 'self'; object-src 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; form-action 'self' https://checkout.wompi.co; base-uri 'self'; object-src 'none'" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,9 +10,7 @@
 <meta name="description" content="Consulta el historial completo de cualquier vehículo por placa: RUNT, SOAT, tecnomecánica, multas, impuestos, avalúo, antecedentes, aseguradoras y siniestros, con semáforo de riesgo." />
 <meta name="theme-color" content="#16222F" />
 <link rel="icon" type="image/png" href="logo.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="fonts/fonts.css" />
 <style>
 :root{
   --ink:#16222F; --ink-2:#1C2C3E; --ink-3:#28394D;
@@ -120,6 +118,15 @@ a{ color:inherit; text-decoration:none; }
 .rrow:last-child{ border-bottom:none; }
 .rk{ font-size:13px; color:var(--muted); flex-shrink:0; }
 .rv{ font-weight:600; font-size:13.5px; text-align:right; font-family:'JetBrains Mono',monospace; }
+.rv{ min-width:0; overflow-wrap:anywhere; }
+.sin{ margin-bottom:12px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:#fcfcfd; }
+.sin-h{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px; font-size:14px; }
+.sin-h span{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); }
+.amp-wrap{ margin-top:8px; }
+.amp-h{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.amp{ padding:8px 10px; margin-bottom:6px; background:#fff; border:1px solid #f0f2f5; border-radius:9px; }
+.amp-t{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-weight:600; font-size:13.5px; }
+.amp-s{ font-size:12.5px; color:var(--muted); margin-top:2px; }
 .rv.big{ font-family:'Poppins',sans-serif; font-weight:800; font-size:1.1rem; }
 .rv .tag{ font-family:'Inter'; font-weight:700; font-size:11px; padding:2px 7px; border-radius:5px; }
 .tag.ok{ background:var(--verde-soft); color:var(--verde); } .tag.warn{ background:var(--ambar-soft); color:var(--ambar); } .tag.bad{ background:var(--rojo-soft); color:var(--rojo); }
@@ -301,7 +308,7 @@ a{ color:inherit; text-decoration:none; }
   <div class="wrap">
     <b>VehiTrack</b> · Historial vehicular por placa · Barranquilla, Colombia
     <div style="margin-top:6px;font-size:12.5px">Autofirm · NIT 1048066862-1 · WhatsApp <a href="https://wa.me/573022789840" style="color:rgba(255,255,255,.66)">302 278 9840</a></div>
-    <div style="margin-top:8px;font-size:12.5px"><a href="terminos.html" style="color:rgba(255,255,255,.66)">Términos y Condiciones</a> · <a href="privacidad.html" style="color:rgba(255,255,255,.66)">Tratamiento de Datos Personales</a></div>
+    <div style="margin-top:8px;font-size:12.5px"><a href="terminos.html" style="color:rgba(255,255,255,.66)">Términos y Condiciones</a> · <a href="privacidad.html" style="color:rgba(255,255,255,.66)">Tratamiento de Datos Personales</a> · <a href="dmca.html" style="color:rgba(255,255,255,.66)">Derechos de autor</a></div>
   </div>
 </footer>
 
@@ -313,6 +320,10 @@ a{ color:inherit; text-decoration:none; }
     <div style="text-align:left; margin-bottom:12px">
       <input id="lgEmail" type="email" placeholder="tu@correo.com" autocomplete="username" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px;margin-bottom:10px" />
       <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
+    </div>
+    <div id="lgNacBox" hidden style="text-align:left;margin-bottom:12px">
+      <label for="lgNac" style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px">Fecha de nacimiento (VehiTrack es solo para mayores de 18 años)</label>
+      <input id="lgNac" type="date" autocomplete="bday" style="background:#fafbfc;border:1px solid var(--line);border-radius:11px;padding:13px 14px;font-size:15px" />
     </div>
     <label id="lgAcc" hidden style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);text-align:left;margin-bottom:12px">
       <input type="checkbox" id="lgAccChk" style="width:16px;height:16px;margin-top:2px;flex-shrink:0" />
@@ -339,6 +350,9 @@ a{ color:inherit; text-decoration:none; }
       <button class="rec" onclick="recargar(50000)"><div class="v">$50.000</div></button>
       <button class="rec" onclick="recargar(100000)"><div class="v">$100.000</div></button>
     </div>
+    <p class="rec-terms" style="font-size:12.5px;color:var(--muted);text-align:left;margin:12px 0 4px">
+      <b>Pago único, sin renovación automática.</b> Esto no es una suscripción: cada recarga se cobra una sola vez y nunca se debita de nuevo sin que tú lo pidas. No hay nada que cancelar. El saldo se descuenta solo cuando haces una consulta ($20.000 cada una). El saldo no usado puedes solicitarlo por <a href="https://wa.me/573022789840" target="_blank" rel="noopener" style="color:var(--brand);font-weight:600">WhatsApp 302 278 9840</a> o <a href="mailto:autofirm_baq@hotmail.com" style="color:var(--brand);font-weight:600">autofirm_baq@hotmail.com</a>; consulta los <a href="terminos.html#recargas" target="_blank" style="color:var(--brand);font-weight:600">Términos (sección 5 y 6)</a>.
+    </p>
     <div class="pay-methods">
       <span class="pm">Nequi</span><span class="pm">PSE</span><span class="pm">Tarjeta</span><span class="pm">Bancolombia</span>
     </div>
@@ -419,7 +433,8 @@ function pintarModoLogin(){
     $('#lgBtn').setAttribute('onclick','registrar()');
     $('#lgTogglePre').textContent = '¿Ya tienes cuenta?';
     $('#lgToggleLink').textContent = 'Ingresar';
-    $('#lgAcc').hidden = false;
+    $('#lgAcc').hidden = false; $('#lgNacBox').hidden = false;
+    { const hoy=new Date(); $('#lgNac').max = hoy.toISOString().slice(0,10); }
   } else {
     $('#lgTitulo').textContent = 'Ingresar';
     $('#lgSub').textContent = 'Accede a tu cuenta para consultar y ver tu saldo.';
@@ -427,7 +442,7 @@ function pintarModoLogin(){
     $('#lgBtn').setAttribute('onclick','login()');
     $('#lgTogglePre').textContent = '¿No tienes cuenta?';
     $('#lgToggleLink').textContent = 'Crear cuenta';
-    $('#lgAcc').hidden = true;
+    $('#lgAcc').hidden = true; $('#lgNacBox').hidden = true;
   }
 }
 async function login(){
@@ -438,14 +453,26 @@ async function login(){
   if(error){ err.textContent = error.message.includes('Invalid')?'Correo o contraseña incorrectos.':error.message; err.classList.remove('hidden'); return; }
   cerrarLogin();
 }
+function edadEnAnios(iso){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return null;
+  const y=+m[1], mo=+m[2], d=+m[3], hoy=new Date();
+  const f=new Date(y,mo-1,d); if(f.getFullYear()!==y||f.getMonth()!==mo-1||f.getDate()!==d||f>hoy) return null;
+  let e=hoy.getFullYear()-y; if(hoy.getMonth()<mo-1||(hoy.getMonth()===mo-1&&hoy.getDate()<d)) e--; return e;
+}
 async function registrar(){
   const email=$('#lgEmail').value.trim(), password=$('#lgPass').value, err=$('#lgErr'), ok=$('#lgOk');
   err.classList.add('hidden'); ok.classList.add('hidden');
   if(!email||!password){ err.textContent='Escribe tu correo y contraseña.'; err.classList.remove('hidden'); return; }
   if(password.length<8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)){ err.textContent='La contraseña debe tener al menos 8 caracteres, con letras y números.'; err.classList.remove('hidden'); return; }
+  // Verificación de edad: solo mayores de 18 años. La fecha se usa para validar y NO se guarda.
+  const nac = $('#lgNac').value;
+  if(!nac){ err.textContent='Escribe tu fecha de nacimiento.'; err.classList.remove('hidden'); return; }
+  const edad = edadEnAnios(nac);
+  if(edad===null || edad>120){ err.textContent='La fecha de nacimiento no es válida.'; err.classList.remove('hidden'); return; }
+  if(edad<18){ err.textContent='VehiTrack es solo para mayores de 18 años. No podemos crear tu cuenta.'; err.classList.remove('hidden'); return; }
   if(!$('#lgAccChk').checked){ err.textContent='Debes aceptar los Términos y Condiciones y el tratamiento de datos.'; err.classList.remove('hidden'); return; }
   const btn=$('#lgBtn'); btn.textContent='Creando cuenta…'; btn.disabled=true;
-  const { data, error } = await sb.auth.signUp({ email, password });
+  const { data, error } = await sb.auth.signUp({ email, password, options:{ data:{ mayor_de_edad:true, acepto_terminos_at:new Date().toISOString(), version_terminos:'1.0' } } });
   btn.disabled=false; btn.textContent='Crear cuenta';
   if(error){ err.textContent = error.message.includes('already registered')?'Ese correo ya tiene una cuenta. Inicia sesión.':error.message; err.classList.remove('hidden'); return; }
   if(data?.session){ // confirmación de correo desactivada: ya quedó logueado
@@ -600,15 +627,35 @@ function renderInforme(raw){
   const soatInfoRows = soatInfoArr.length ? soatInfoArr.map(x=>row(escHtml(x.compania), `${escHtml(x.ini_vigencia)} → ${escHtml(x.fin_vigencia)} ${estadoTag(x.estado)}`)).join('')
     : `<div class="empty-sec">${r.infosiniestralError?'No disponible en esta consulta.':'Sin historial de SOAT (aseguradoras) para esta placa.'}</div>`;
 
-  // Siniestros (InfoSiniestral): forma exacta no confirmada con un caso
-  // real con datos — se muestra de forma genérica, sin asumir campos fijos.
-  const siniestrosHTML = siniestros.length ? siniestros.map(x=>{
-    if(typeof x === 'object' && x){
-      const campos = Object.entries(x).map(([k,val])=>row(escHtml(k), escHtml(typeof val==='object'?JSON.stringify(val):val))).join('');
-      return `<div class="note" data-siniestro="1" style="margin-bottom:10px;padding:10px;border:1px solid var(--line);border-radius:10px">${campos}</div>`;
-    }
-    return row('Registro', escHtml(x));
-  }).join('') : `<div class="empty-sec">${r.infosiniestralError?'No disponible en esta consulta.':'Sin siniestros registrados para esta placa.'}</div>`;
+  // Siniestros: cada uno se muestra ordenado (aseguradora, fecha, vehículo, valores y amparos).
+  // Los datos personales del asegurado (cédula, póliza, nombre completo) NO se muestran: el nombre sale con iniciales.
+  const enmascarar = s => String(s??'').replace(/&[a-z#0-9]+;/gi,'').trim().split(/\s+/).filter(Boolean).map(w=>w[0]+'***').join(' ');
+  const gk = (o,k)=>{ if(!o||typeof o!=='object') return undefined; const f=Object.keys(o).find(q=>q.toLowerCase().replace(/[\s_]/g,'')===k); return f?o[f]:undefined; };
+  const NO_EXTRA = /^(detalle|amparos|numero|aseguradora|compania|fecha|asegurado|cedula|poliza|motor|chasis|marca|clase|modelo|valor_asegurado)$/i;
+  const PERSONAL = /nombre|name|document|c[eé]dula|identific|propiet|titular|tel[eé]fono|celular|direcci|correo|e-?mail|licencia|asegurad|p[oó]liza/i;
+  function siniestroHTML(x){
+    if(!x || typeof x!=='object') return row('Registro', escHtml(x));
+    const aseg = x.aseguradora || x.compania;
+    const veh = [x.marca,x.clase,x.modelo].filter(Boolean).join(' · ');
+    const amp = Array.isArray(x.amparos) ? x.amparos : [];
+    const ampHTML = amp.map(a=>{
+      const nombre = gk(a,'amparo'), estado = gk(a,'estado'), aviso = gk(a,'aviso'), valor = gk(a,'valorreclamado');
+      return `<div class="amp"><div class="amp-t"><span>${escHtml(nombre||'Amparo')}</span>${estado?`<span class="tag warn">${escHtml(estado)}</span>`:''}</div>
+        <div class="amp-s">${aviso?`Aviso: ${escHtml(aviso)}`:''}${aviso&&valor?' · ':''}${valor?`Valor reclamado: <b>${escHtml(valor)}</b>`:''}</div></div>`;
+    }).join('');
+    const extras = Object.entries(x).filter(([k,val])=>!NO_EXTRA.test(k) && !PERSONAL.test(k) && val!=null && typeof val!=='object' && String(val).trim()!=='')
+      .map(([k,val])=>row(escHtml(k.replace(/_/g,' ')), escHtml(val))).join('');
+    return `<div class="sin" data-siniestro="1">
+      <div class="sin-h"><b>${escHtml(aseg||'Siniestro')}</b>${x.fecha?`<span>${escHtml(x.fecha)}</span>`:''}</div>
+      ${veh?row('Vehículo', escHtml(veh)):''}
+      ${x.valor_asegurado?row('Valor asegurado', escHtml(x.valor_asegurado)):''}
+      ${x.asegurado?row('Asegurado', escHtml(enmascarar(x.asegurado))):''}
+      ${extras}
+      ${ampHTML?`<div class="amp-wrap"><div class="amp-h">Amparos reclamados</div>${ampHTML}</div>`:''}
+    </div>`;
+  }
+  const siniestrosHTML = siniestros.length ? siniestros.map(siniestroHTML).join('')
+    : `<div class="empty-sec">${r.infosiniestralError?'No disponible en esta consulta.':'Sin siniestros registrados para esta placa.'}</div>`;
 
   // Ficha técnica Fasecolda (PlacApi)
   const ft = fc?.fichaTecnica||{};
@@ -716,7 +763,7 @@ function renderInforme(raw){
 
     <!-- Siniestros (InfoSiniestral) -->
     <div class="rcard wide">
-      <div class="rc-head">${icoBox('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<h3>Siniestros</h3>${badge(siniestros.length?'bad':'ok')}</div>
+      <div class="rc-head">${icoBox('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<h3>Siniestros</h3>${siniestros.length?'<span class="badge bad">Con siniestros</span>':badge('ok')}</div>
       ${siniestrosHTML}
     </div>
 
@@ -786,7 +833,7 @@ function cargarHtml2Pdf(){
 }
 /* Copia del informe SIN datos personales del propietario: es la que se convierte en PDF
    (para descargar y para enviar por WhatsApp). En pantalla, la persona que consultó sí los ve. */
-const CLAVE_PERSONAL = /nombre|name|document|c[eé]dula|identific|propiet|titular|tel[eé]fono|celular|direcci|correo|e-?mail|licencia/i;
+const CLAVE_PERSONAL = /nombre|name|document|c[eé]dula|identific|propiet|titular|tel[eé]fono|celular|direcci|correo|e-?mail|licencia|^asegurado$|p[oó]liza/i;
 function copiaSinDatosPersonales(){
   const c = $('#informeBody').cloneNode(true);
   c.querySelectorAll('.report-foot').forEach(n => n.remove());
@@ -798,7 +845,7 @@ function copiaSinDatosPersonales(){
   });
   // 2) Siniestros: se muestran campos genéricos del proveedor; se tapa cualquiera que parezca dato personal.
   c.querySelectorAll('[data-siniestro] .rrow').forEach(f => {
-    if (CLAVE_PERSONAL.test(f.querySelector('.rk')?.textContent || '')) f.querySelector('.rv').textContent = '(omitido)';
+    if (CLAVE_PERSONAL.test((f.querySelector('.rk')?.textContent || '').trim())) f.querySelector('.rv').textContent = '(omitido)';
   });
   // 3) Correos electrónicos en cualquier texto.
   const w = document.createTreeWalker(c, NodeFilter.SHOW_TEXT);
