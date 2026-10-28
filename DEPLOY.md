@@ -214,3 +214,11 @@ update public.admins a set puede_abonar = true  -- o false
 
 ## PDF sin datos personales
 El PDF que se descarga o se envía por WhatsApp no incluye el nombre del titular ni datos de licencia (Ley 1581 de 2012). En pantalla, quien hizo la consulta sí los ve.
+
+## Cumplimiento (cambios de octubre)
+- **Edad:** el registro pide fecha de nacimiento y bloquea a menores de 18 (la fecha no se guarda; solo queda `mayor_de_edad: true` y la fecha de aceptación en los datos del usuario). Es una verificación declarativa en el navegador: no impide que alguien llame a la API de Supabase directamente.
+- **Fuentes:** ahora están en la carpeta `fonts/` (Inter, Poppins, JetBrains Mono, licencia SIL OFL). Hay que subir también esa carpeta a GitHub. La página ya no contacta a Google.
+- **Grabación de sesiones:** VehiTrack no usa ninguna herramienta de grabación (ni analítica de terceros) y la CSP bloquea scripts externos salvo jsDelivr. Si algún día agregas una (Hotjar, Clarity, etc.): déjala apagada por defecto, actívala solo con consentimiento y enmascara todos los campos de texto.
+- **Correos:** VehiTrack solo envía el correo transaccional de la consulta (lleva identificación de la empresa). Si algún día envías correos de marketing, cada uno debe llevar enlace de baja y dirección postal, y solo a quien lo autorizó.
+- **Recargas:** son pagos únicos, sin renovación; el aviso aparece junto a los botones de recarga y en los Términos.
+- **DMCA:** `dmca.html`. Antes de publicarla completa nombre y dirección física del agente y regístralo en https://www.copyright.gov/dmca-directory/ (USD 6, vence a los 3 años).

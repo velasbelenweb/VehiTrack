@@ -102,5 +102,6 @@ export function construirEmailInforme(informeCrudo: any, placaCruda: string): st
     </div>
     ${secciones}
     <p style="font-size:12px;color:#5A6577;margin-top:20px">Este correo es una copia de respaldo de tu consulta. Puedes ver el informe completo, con el semáforo de riesgo, iniciando sesión en <a href="https://vehitrack.app" style="color:#0A9D7B">vehitrack.app</a> y revisando tu historial.</p>
+    <p style="font-size:11.5px;color:#5A6577;margin-top:12px;border-top:1px solid #E3E7EC;padding-top:12px">Este es un correo del servicio que solicitaste (copia de tu consulta); no es publicidad. Enviado por Autofirm (VehiTrack) · NIT 1048066862-1 · Barranquilla, Colombia · WhatsApp 302 278 9840 · <a href="https://vehitrack.app/privacidad.html" style="color:#5A6577">Política de datos personales</a>.</p>
   </div>`;
 }

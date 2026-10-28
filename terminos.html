@@ -2,13 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src 'self' https://*.googletagmanager.com" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KZCDVPPR');</script>
+<!-- End Google Tag Manager -->
 <title>Términos y Condiciones — VehiTrack</title>
 <link rel="icon" type="image/png" href="logo.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="fonts/fonts.css" />
 <style>
 :root{ --ink:#16222F; --ink-2:#1C2C3E; --paper:#F4F6F8; --line:#E3E7EC; --text:#16222F; --muted:#5A6577; --brand:#0A9D7B; --brand-soft:#E3F6F1; }
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
@@ -30,6 +35,10 @@ li{ margin-bottom:6px; }
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KZCDVPPR"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <header class="hd"><div class="hd-in"><a href="index.html"><img src="logo.png" alt="VehiTrack" /></a></div></header>
 <div class="wrap">
   <a class="back" href="index.html">← Volver a VehiTrack</a>
@@ -62,10 +71,13 @@ li{ margin-bottom:6px; }
   <h2>4. Registro y cuenta de usuario</h2>
   <p>Determinados servicios requieren la creación de una cuenta. El Usuario se obliga a suministrar información veraz, completa y actualizada, y a mantener la confidencialidad de sus credenciales de acceso. El Usuario es responsable de toda actividad realizada desde su cuenta. VehiTrack podrá suspender o cancelar cuentas que incumplan estos Términos o que registren un uso fraudulento, abusivo o no autorizado.</p>
 
-  <h2>5. Recargas de saldo y pagos</h2>
+    <p>El servicio está dirigido exclusivamente a personas <b>mayores de 18 años</b>. Al crear una cuenta, el Usuario declara tener esa edad y se le solicita su fecha de nacimiento únicamente para verificarla (no se conserva). VehiTrack no recopila a sabiendas datos de menores de edad; si se detecta una cuenta de un menor, será eliminada.</p>
+
+  <h2 id="recargas">5. Recargas de saldo y pagos</h2>
   <p>VehiTrack ofrece el pago directo por consulta y la recarga de saldo (wallet) para pagar las consultas por adelantado. El valor vigente de cada modalidad se informa en el Sitio antes de confirmar la transacción.</p>
   <p>Los pagos se procesan a través de pasarelas de pago autorizadas (Wompi), que admiten medios como Nequi, PSE, tarjetas y transferencias. VehiTrack no almacena los datos financieros sensibles del Usuario.</p>
   <p>El saldo recargado se descuenta por cada consulta efectuada ($20.000 por consulta). El Usuario es responsable de digitar correctamente la placa; una consulta ejecutada con una placa digitada erróneamente por el Usuario se considera prestada.</p>
+  <p>Las recargas son pagos únicos. VehiTrack no ofrece suscripciones ni cobros recurrentes automáticos: VehiTrack no guarda medios de pago ni los usa para cobrar de nuevo sin que el Usuario inicie una nueva recarga, por lo que no existe renovación que cancelar.</p>
   <p>Los precios se expresan en pesos colombianos (COP) e incluyen los impuestos aplicables, salvo que se indique lo contrario.</p>
 
   <h2>6. Derecho de retracto y reversión del pago</h2>

@@ -2,10 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; form-action 'self' https://checkout.wompi.co; base-uri 'self'; object-src 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; connect-src 'self' https://*.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; form-action 'self' https://checkout.wompi.co; base-uri 'self'; object-src 'none'; frame-src 'self' https://*.googletagmanager.com" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KZCDVPPR');</script>
+<!-- End Google Tag Manager -->
 <title>VehiTrack — Historial vehicular por placa</title>
 <meta name="description" content="Consulta el historial completo de cualquier vehículo por placa: RUNT, SOAT, tecnomecánica, multas, impuestos, avalúo, antecedentes, aseguradoras y siniestros, con semáforo de riesgo." />
 <meta name="theme-color" content="#16222F" />
@@ -226,6 +233,10 @@ a{ color:inherit; text-decoration:none; }
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KZCDVPPR"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 
 <!-- ============ HEADER ============ -->
 <header class="hd">

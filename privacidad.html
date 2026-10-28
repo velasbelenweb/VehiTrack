@@ -2,13 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.google-analytics.com https://*.googletagmanager.com; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://*.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src 'self' https://*.googletagmanager.com" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KZCDVPPR');</script>
+<!-- End Google Tag Manager -->
 <title>Política de Tratamiento de Datos Personales — VehiTrack</title>
 <link rel="icon" type="image/png" href="logo.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="fonts/fonts.css" />
 <style>
 :root{ --ink:#16222F; --ink-2:#1C2C3E; --paper:#F4F6F8; --line:#E3E7EC; --text:#16222F; --muted:#5A6577; --brand:#0A9D7B; --brand-soft:#E3F6F1; }
 *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
@@ -33,6 +38,10 @@ td:first-child{ font-weight:700; width:32%; }
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KZCDVPPR"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <header class="hd"><div class="hd-in"><a href="index.html"><img src="logo.png" alt="VehiTrack" /></a></div></header>
 <div class="wrap">
   <a class="back" href="index.html">← Volver a VehiTrack</a>
@@ -76,6 +85,8 @@ td:first-child{ font-weight:700; width:32%; }
   <h2>6. Datos sensibles</h2>
   <p>VehiTrack no recolecta datos sensibles de manera deliberada para la prestación del servicio. En caso de requerirse, su Tratamiento se sujetará a autorización expresa del Titular, quien no está obligado a autorizarlo, con indicación de la finalidad específica.</p>
 
+    <p><b>Menores de edad.</b> VehiTrack está dirigido solo a mayores de 18 años y no recopila intencionalmente datos personales de niños, niñas ni adolescentes. Al registrarse se verifica la mayoría de edad con la fecha de nacimiento, que se usa solo para esa validación y no se almacena. Si se llega a detectar una cuenta de un menor, se eliminará junto con sus datos. Si usted cree que un menor se registró, escriba a autofirm_baq@hotmail.com.</p>
+
   <h2>7. Finalidades del Tratamiento</h2>
   <ul>
     <li>Permitir el registro, la autenticación y la gestión de la cuenta del Usuario.</li>
@@ -107,13 +118,13 @@ td:first-child{ font-weight:700; width:32%; }
   <p><b>Reclamos:</b> se atenderán en un término máximo de quince (15) días hábiles contados desde el día siguiente a su recibo. Cuando no fuere posible, se informará al interesado los motivos y la fecha de respuesta, que no superará los ocho (8) días hábiles siguientes.</p>
 
   <h2>11. Encargados, transferencia y transmisión</h2>
-  <p>Para operar el servicio, VehiTrack comparte datos con Encargados que los tratan por su cuenta y bajo sus instrucciones, tales como proveedores de datos vehiculares (InfoSiniestral y PlacApi), pasarelas de pago (Wompi), servicios de alojamiento (Supabase, Render) y herramientas de soporte. Estos Encargados están obligados a cumplir la normativa de protección de datos y a mantener la confidencialidad y seguridad de la información. Cuando se realicen transferencias internacionales, se adoptarán las garantías exigidas por la ley.</p>
+  <p>Para operar el servicio, VehiTrack comparte datos con Encargados que los tratan por su cuenta y bajo sus instrucciones, tales como proveedores de datos vehiculares (InfoSiniestral y PlacApi), pasarelas de pago (Wompi), herramientas de analítica (Google Tag Manager), servicios de alojamiento (Supabase, Render) y herramientas de soporte. Estos Encargados están obligados a cumplir la normativa de protección de datos y a mantener la confidencialidad y seguridad de la información. Cuando se realicen transferencias internacionales, se adoptarán las garantías exigidas por la ley.</p>
 
   <h2>12. Seguridad de la información</h2>
   <p>VehiTrack implementa medidas técnicas, humanas y administrativas razonables para proteger los datos frente a adulteración, pérdida, consulta, uso o acceso no autorizado o fraudulento, incluyendo cifrado en tránsito, controles de acceso y custodia de credenciales en entornos seguros.</p>
 
   <h2>13. Cookies</h2>
-  <p>El Sitio puede utilizar cookies y tecnologías similares para su funcionamiento, seguridad, analítica y mejora de la experiencia. El Usuario puede configurar su navegador para gestionarlas; deshabilitarlas puede afectar algunas funcionalidades.</p>
+  <p>El Sitio puede utilizar cookies y tecnologías similares para su funcionamiento, seguridad, analítica y mejora de la experiencia. Para la analítica y la medición del Sitio se usa Google Tag Manager (Google LLC), que puede cargar herramientas de medición como Google Analytics y recibir datos de uso de la navegación (páginas visitadas, tipo de dispositivo e identificadores de cookies). El Usuario puede configurar su navegador para gestionarlas; deshabilitarlas puede afectar algunas funcionalidades.</p>
 
   <h2>14. Vigencia de la Política y de las bases de datos</h2>
   <p>La presente Política rige a partir del 4 de octubre de 2026. Las bases de datos se conservarán durante el tiempo necesario para cumplir las finalidades descritas y las obligaciones legales aplicables. VehiTrack podrá actualizar esta Política; los cambios sustanciales se informarán a través del Sitio.</p>
