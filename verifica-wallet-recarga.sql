@@ -38,3 +38,5 @@ begin
   returning creditos into restante;
   return restante;
 end $$;
+revoke execute on function public.sumar_creditos(uuid, integer) from public, anon, authenticated;
+grant execute on function public.sumar_creditos(uuid, integer) to service_role;

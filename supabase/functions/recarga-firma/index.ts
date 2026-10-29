@@ -64,6 +64,16 @@ Deno.serve(async (req) => {
     if (!publicKey || !secret) return json({ error: "wompi_no_configurado" }, 500);
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Límite de ritmo: máx. 5 recargas iniciadas por minuto por usuario.
+    const hace1min = new Date(Date.now() - 60_000).toISOString();
+    const { count: recientes } = await admin.from("recargas").select("id", { count: "exact", head: true })
+      .eq("user_id", userId).gte("created_at", hace1min);
+    if ((recientes ?? 0) >= 5) {
+      await registrarEvento(admin, "warn", "limite_recargas", userId, { en_el_ultimo_minuto: recientes });
+      return json({ error: "demasiadas_recargas" }, 429);
+    }
+
     const reference = `AFV-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const amountInCents = monto * 100;
 

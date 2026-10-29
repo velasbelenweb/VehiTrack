@@ -56,6 +56,8 @@ begin
   if not found then return -1; end if;
   return restante;
 end $$;
+revoke execute on function public.consumir_credito(uuid, integer) from public, anon, authenticated;
+grant execute on function public.consumir_credito(uuid, integer) to service_role;
 
 -- Reintegra el crédito si la consulta al proveedor falló.
 create or replace function public.reintegrar_credito(p_user uuid, p_costo int)
@@ -68,6 +70,8 @@ begin
   returning creditos into restante;
   return coalesce(restante, 0);
 end $$;
+revoke execute on function public.reintegrar_credito(uuid, integer) from public, anon, authenticated;
+grant execute on function public.reintegrar_credito(uuid, integer) to service_role;
 
 -- 5) CREAR WALLET AUTOMÁTICO AL REGISTRARSE ----------------------
 create or replace function public.crear_wallet()
@@ -77,6 +81,8 @@ begin
   on conflict (user_id) do nothing;
   return new;
 end $$;
+revoke execute on function public.crear_wallet() from public, anon, authenticated;
+grant execute on function public.crear_wallet() to service_role;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
