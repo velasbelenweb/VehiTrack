@@ -1,0 +1,8 @@
+#vtCookies{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:640px;margin:0 auto;background:#16222F;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.35);font:14px/1.45 Inter,system-ui,sans-serif;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#vtCookies p{margin:0;flex:1 1 280px;overflow-wrap:break-word}
+#vtCookies a{color:#7fe3c6;text-decoration:underline}
+#vtCookies .vtc-b{display:flex;gap:8px;flex:0 0 auto;width:100%}
+#vtCookies button{flex:1;min-height:44px;padding:10px 16px;border-radius:10px;border:1.5px solid #0A9D7B;background:#0A9D7B;color:#fff;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+#vtCookies button:first-child{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
+#vtCookies button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(min-width:560px){#vtCookies .vtc-b{width:auto}#vtCookies button{flex:0 0 auto}}

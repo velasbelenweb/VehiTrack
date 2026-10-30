@@ -150,6 +150,37 @@ async function recargar(monto){
    ================================================================ */
 function esVigente(estado){ return (estado||'').toString().toUpperCase().startsWith('VIGENTE'); }
 
+/* ----------------------------------------------------------------
+   REGLAS DEL SEMÁFORO (ajustables aquí)
+   VERDE    : sin señales, o solo "ninguna póliza de aseguradora vigente".
+   AMARILLO : 1 o más de: SOAT vencido · tecnomecánica vencida ·
+              1 siniestro de menos de UMBRAL_SINIESTRO · 1 o más multas/comparendos ·
+              impuesto pendiente.
+   ROJO     : 1 o más de: siniestro de UMBRAL_SINIESTRO o más · más de 1 siniestro ·
+              embargo o gravamen (prenda) · multas por MULTAS_ROJO o más.
+   ---------------------------------------------------------------- */
+const UMBRAL_SINIESTRO = 8000000;   // pesos
+const MULTAS_ROJO = 2000000;        // pesos de deuda en multas desde la cual pasa a rojo
+
+// Convierte "$ 1.234.567", "1234567,50" o 1234567 en número; null si no se puede leer.
+function aPesos(v){
+  if(typeof v==='number') return isFinite(v)?v:null;
+  let t=String(v??'').replace(/&[a-z#0-9]+;/gi,'').replace(/[^\d.,-]/g,'');
+  if(!/\d/.test(t)) return null;
+  t = /,\d{1,2}$/.test(t) ? t.replace(/\./g,'').replace(',','.') : t.replace(/[.,]/g,'');
+  const n=Number(t); return isFinite(n)?n:null;
+}
+// Valor de un siniestro = suma del "valor reclamado" de sus amparos (o un campo de valor directo).
+function valorSiniestro(x){
+  if(!x||typeof x!=='object') return null;
+  const gk=(o,k)=>{ const f=Object.keys(o||{}).find(q=>q.toLowerCase().replace(/[\s_]/g,'')===k); return f?o[f]:undefined; };
+  let tot=0, hay=false;
+  for(const am of (Array.isArray(x.amparos)?x.amparos:[])){ const n=aPesos(gk(am,'valorreclamado')); if(n!=null){ tot+=n; hay=true; } }
+  if(hay) return tot;
+  for(const k of ['valor_reclamado','valorreclamado','valor_siniestro','valor_pagado','valor']){ const n=aPesos(gk(x,k.replace(/_/g,''))); if(n!=null) return n; }
+  return null;
+}
+
 function calcularRiesgo(r){
   const flags = [];
   const push = (nivel, texto) => flags.push({nivel, texto});
@@ -166,35 +197,50 @@ function calcularRiesgo(r){
   const asegVigente = aseg.some(x=>esVigente(x.estado));
   const soatInfoVigente = soatInfoArr.some(x=>esVigente(x.estado));
 
-  // --- señales de InfoSiniestral ---
-  if(siniestros.length) push('rojo', `${siniestros.length} siniestro(s) registrado(s)`);
-  if(aseg.length && !asegVigente) push('amarillo', 'Ninguna póliza de aseguradora vigente actualmente');
-  if(soatInfoArr.length && !soatInfoVigente) push('amarillo', 'Ninguna póliza SOAT (historial aseguradoras) vigente actualmente');
-  if(!siniestros.length && (aseg.length || soatInfoArr.length)) push('verde', 'Sin siniestros registrados');
-  if(asegVigente) push('verde', 'Tiene una póliza de aseguradora vigente');
+  // --- Siniestros ---
+  if(siniestros.length>1){
+    push('rojo', `${siniestros.length} siniestros registrados`);
+  } else if(siniestros.length===1){
+    const val = valorSiniestro(siniestros[0]);
+    if(val==null) push('amarillo', '1 siniestro registrado (valor no informado: verifica el monto)');
+    else if(val>=UMBRAL_SINIESTRO) push('rojo', `1 siniestro de ${money(val)} (8 millones o más)`);
+    else push('amarillo', `1 siniestro de ${money(val)} (menos de 8 millones)`);
+  } else if(aseg.length || soatInfoArr.length){
+    push('verde', 'Sin siniestros registrados');
+  }
 
-  // --- señales de PlacApi ---
+  // --- Aseguradora: sin póliza vigente NO cambia el semáforo (solo informa) ---
+  if(asegVigente) push('verde', 'Tiene una póliza de aseguradora vigente');
+  else if(aseg.length) push('verde', 'Sin póliza de aseguradora vigente actualmente (no afecta el semáforo)');
+
+  // --- SOAT / tecnomecánica vencidos: amarillo ---
+  if(soatPla.vigente===false) push('amarillo', 'SOAT vencido');
+  else if(!pla && soatInfoArr.length && !soatInfoVigente) push('amarillo', 'SOAT vencido');
+  if(rtm.vigente===false) push('amarillo', 'Tecnomecánica vencida');
+
   if(pla){
+    // --- Rojo: embargo o gravamen ---
     if((a.embargos||[]).length) push('rojo', `Embargo(s) vigente(s): ${a.embargos.length}`);
+    if((a.prendas||[]).length) push('rojo', `Gravamen / prenda vigente ante ${(a.prendas[0].acreedor||'').split(' ').slice(0,3).join(' ')}…`);
     if(v.estado && v.estado.toLowerCase()!=='activo') push('rojo', `Estado del registro: ${v.estado}`);
     if((v.regrabados||[]).length) push('rojo', 'Regrabación de seriales detectada');
-    if((a.prendas||[]).length) push('amarillo', `Prenda vigente ante ${a.prendas[0].acreedor.split(' ').slice(0,3).join(' ')}…`);
+    // --- Multas: amarillo desde 1; rojo si la deuda llega a MULTAS_ROJO ---
+    const deuda = s ? (Number(s.totalDeuda)||0) : 0;
+    if(deuda>=MULTAS_ROJO) push('rojo', `Multas SIMIT: ${money(deuda)}`);
+    else if(deuda>0) push('amarillo', `Multas o comparendos SIMIT: ${money(deuda)}`);
+    // --- Impuesto pendiente: amarillo ---
     if(imp && imp.totalPendiente>0) push('amarillo', `Impuesto pendiente: ${money(imp.totalPendiente)}`);
-    if(s && (s.totalDeuda||0)>0) push('amarillo', `Multas SIMIT: ${money(s.totalDeuda)}`);
-    if(soatPla.vigente===false) push('rojo', 'SOAT vencido');
-    else if(soatPla.diasParaVencer!=null && soatPla.diasParaVencer<=30) push('amarillo', `SOAT vence en ${soatPla.diasParaVencer} días`);
-    if(rtm.vigente===false) push('rojo', 'Tecnomecánica vencida');
-    else if(rtm.diasParaVencer!=null && rtm.diasParaVencer<=30) push('amarillo', `Tecnomecánica vence en ${rtm.diasParaVencer} días`);
 
+    // --- Señales positivas / informativas ---
     if(!(a.embargos||[]).length && !(a.prendas||[]).length) push('verde', 'Sin gravámenes ni embargos');
     if(s && s.pazSalvo) push('verde', 'Paz y salvo de multas (SIMIT)');
-    if(soatPla.vigente && soatPla.diasParaVencer>30) push('verde', 'SOAT vigente');
-    if(rtm.vigente && rtm.diasParaVencer>30) push('verde', 'Tecnomecánica vigente');
+    if(soatPla.vigente) push('verde', soatPla.diasParaVencer!=null && soatPla.diasParaVencer<=30 ? `SOAT vigente (vence en ${soatPla.diasParaVencer} días)` : 'SOAT vigente');
+    if(rtm.vigente) push('verde', rtm.diasParaVencer!=null && rtm.diasParaVencer<=30 ? `Tecnomecánica vigente (vence en ${rtm.diasParaVencer} días)` : 'Tecnomecánica vigente');
   }
 
   const nivel = flags.some(f=>f.nivel==='rojo') ? 'rojo' : flags.some(f=>f.nivel==='amarillo') ? 'amarillo' : 'verde';
   const verdict = {
-    verde:'Sin alertas relevantes con la información disponible. El vehículo está al día, con seguro vigente y sin siniestros registrados.',
+    verde:'Sin señales de alerta con la información disponible.',
     amarillo:'Requiere atención. Hay pendientes o condiciones que debes verificar y negociar antes de cerrar el negocio.',
     rojo:'Alto riesgo. Se detectaron condiciones graves; recomendamos no comprar hasta aclararlas por completo.'
   }[nivel];

@@ -228,3 +228,6 @@ El PDF que se descarga o se envía por WhatsApp no incluye el nombre del titular
 - **F2:** no subas la carpeta `mnt/` al repositorio (está en `.gitignore`). Para quitarla si ya está subida: `git rm -r --cached mnt` y luego commit + push.
 - **F3:** la CSP ya no usa `'unsafe-inline'` en scripts. El código vive en `app.js` y `admin.js`; los botones usan `data-act`. Solo se permite en línea el snippet de GTM (por hash). Si cambias ese snippet, recalcula el hash. Las etiquetas "HTML personalizado" de GTM no funcionarán con esta CSP.
 - **F4:** `recarga-firma` limita a 5 recargas por minuto por usuario.
+
+## Aviso de cookies (Consent Mode v2)
+`consent.js` + `consent.css` muestran el aviso y mandan a GTM el consentimiento (todo denegado por defecto). En GTM, la etiqueta de GA4 debe usar "Verificaciones de consentimiento integradas" (analytics_storage). El enlace "Cookies" del pie permite cambiar la decisión.
