@@ -548,6 +548,8 @@ async function descargarPdf(){
 async function generarPdfInforme(placa){
   await cargarHtml2Pdf();
   const el = copiaSinDatosPersonales();
+  const lg = el.querySelector('.report-logo-print');
+  if(lg){ lg.style.display='block'; lg.style.textAlign='center'; lg.style.margin='0 0 16px'; const im=lg.querySelector('img'); if(im){ im.style.height='90px'; im.style.width='auto'; } }
   const nombre = `VehiTrack-${String(placa||'informe').replace(/[^A-Za-z0-9_-]/g,'')}.pdf`;
   const blob = await window.html2pdf().set({
     margin: [10, 8, 10, 8],
