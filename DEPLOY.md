@@ -230,4 +230,4 @@ El PDF que se descarga o se envía por WhatsApp no incluye el nombre del titular
 - **F4:** `recarga-firma` limita a 5 recargas por minuto por usuario.
 
 ## Aviso de cookies (Consent Mode v2)
-`consent.js` + `consent.css` muestran el aviso y mandan a GTM el consentimiento (todo denegado por defecto). En GTM, la etiqueta de GA4 debe usar "Verificaciones de consentimiento integradas" (analytics_storage). El enlace "Cookies" del pie permite cambiar la decisión.
+`consent.js` + `consent.css` muestran el aviso y mandan a GTM el consentimiento (todo denegado por defecto), con analítica (`analytics_storage`) y publicidad (`ad_storage`, `ad_user_data`, `ad_personalization`) por separado. La etiqueta de Meta en GTM debe exigir `ad_storage`; la de GA4, `analytics_storage`. En GTM, la etiqueta de GA4 debe usar "Verificaciones de consentimiento integradas" (analytics_storage). El enlace "Cookies" del pie permite cambiar la decisión.
